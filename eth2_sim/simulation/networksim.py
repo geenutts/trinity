@@ -1,7 +1,7 @@
 import random
 import threading
 
-from .distributions import (
+from distributions import (
     transform,
     normal_distribution,
 )

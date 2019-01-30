@@ -30,18 +30,19 @@ from eth2.beacon.tools.builder.validator import (  # noqa: F401
     sign_proof_of_possession,
 )
 
-from .sim_config import Config as p
-from .distributions import (  # noqa: F401
+from beacon_utils import (
+    get_chain,
+)
+from distributions import (  # noqa: F401
     transform,
     exponential_distribution,
 )
-from .beacon_utils import (
-    get_chain,
-)
-from .message import (
+from message import (
     GetBlocksRequest,
     GetBlocksResponse,
 )
+from sim_config import Config as p
+
 
 
 def format_receiving(f):
@@ -154,7 +155,7 @@ class Validator(object):
     def format_broadcast(self, network_id, obj, content=None):
         self.network.broadcast(self, obj, network_id=network_id)
         self.print_info(
-            f'Broadcasted a {obj} @network_id: {network_id}, content: {content}'
+            f'Broadcasted a {obj} @network_id: {network_id}, content: {content} '
             f'peers: {self.network.get_peers(self, network_id)}'
         )
 
@@ -259,6 +260,7 @@ class Validator(object):
             validator_index=self.validator_index,
             privkey=self.privkey,
             attestations=attestations,
+            check_proposer_index=False,
         )
         self.format_broadcast(1, block, content=None)
 
