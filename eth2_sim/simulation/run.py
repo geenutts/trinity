@@ -12,15 +12,15 @@ from eth2.beacon.state_machines.forks.serenity.blocks import (
 from eth2.beacon.state_machines.forks.serenity.configs import SERENITY_CONFIG
 from eth2.beacon.types.states import BeaconState
 
-from .beacon_utils import (  # noqa: F401
+from beacon_utils import (  # noqa: F401
     generate_genesis_state,
 )
-from .networksim import (
+from networksim import (
     NetworkSimulator,
 )
-from .progress import progress
-from .sim_config import Config as p
-from .validator import Validator
+from progress import progress
+from sim_config import Config as p
+from validator import Validator
 
 
 #
