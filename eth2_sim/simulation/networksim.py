@@ -1,9 +1,10 @@
-from distributions import (
+import random
+import threading
+
+from .distributions import (
     transform,
     normal_distribution,
 )
-import random
-import threading
 
 
 class TickThread(threading.Thread):

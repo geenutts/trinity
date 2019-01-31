@@ -1,28 +1,26 @@
 import time
 import rlp
 
-from progress import progress
-
-from validator import Validator
-from sim_config import Config as p
-import networksim
-
-
 import eth2._utils.bls as bls
 from eth2.beacon._utils.hash import hash_eth2
-
+from eth2.beacon.on_startup import (
+    get_genesis_block,
+)
 from eth2.beacon.state_machines.forks.serenity.blocks import (
     SerenityBeaconBlock,
 )
 from eth2.beacon.state_machines.forks.serenity.configs import SERENITY_CONFIG
 from eth2.beacon.types.states import BeaconState
 
-from eth2.beacon.on_startup import (
-    get_genesis_block,
-)
-from beacon_utils import (  # noqa: F401
+from .beacon_utils import (  # noqa: F401
     generate_genesis_state,
 )
+from .networksim import (
+    NetworkSimulator,
+)
+from .progress import progress
+from .sim_config import Config as p
+from .validator import Validator
 
 
 #
@@ -42,7 +40,7 @@ pubkeys = list(keymap)
 
 def simulation():
     # Initialize NetworkSimulator
-    network = networksim.NetworkSimulator(latency=p.LATENCY, reliability=p.RELIABILITY)
+    network = NetworkSimulator(latency=p.LATENCY, reliability=p.RELIABILITY)
     network.time = p.INITIAL_TIMESTAMP
 
     # 1. Create genesis state

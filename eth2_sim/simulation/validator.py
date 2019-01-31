@@ -30,32 +30,18 @@ from eth2.beacon.tools.builder.validator import (  # noqa: F401
     sign_proof_of_possession,
 )
 
-
-# from sharding_utils import RandaoManager
-from sim_config import Config as p
-from distributions import (  # noqa: F401
+from .sim_config import Config as p
+from .distributions import (  # noqa: F401
     transform,
     exponential_distribution,
 )
-from beacon_utils import (
+from .beacon_utils import (
     get_chain,
 )
-
-from message import (
+from .message import (
     GetBlocksRequest,
     GetBlocksResponse,
 )
-
-BLOCK_BEHIND_THRESHOLD = 3
-COLLATION_BEHIND_THRESHOLD = 2
-GET_BLOCKS_AMOUNT = 20
-GET_COLLATIONS_AMOUNT = 1
-TXQUEUE_DEPTH = 20
-PIVOT_DEPTH = 3
-
-# Gas setting
-STARTGAS = 21000
-GASPRICE = 1
 
 
 def format_receiving(f):
