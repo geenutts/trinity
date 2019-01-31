@@ -139,7 +139,7 @@ def get_genesis_state(config, pubkeys):
 def generate_genesis_state(config):
     state = get_genesis_state(config, pubkeys)
     with open('hundred_validators_state.txt', 'w') as f:
-        print(rlp.encode(state).hex(), file=f)
+        f.write(rlp.encode(state).hex())
 
     return state
 
@@ -172,6 +172,13 @@ def get_chain(config, genesis_state, genesis_block, base_db):
     return chain
 
 
+#
+# Network
+#
+
+#
+# Main
+#
 def sim():
     config = SERENITY_CONFIG
 
@@ -186,7 +193,7 @@ def sim():
     genesis_state = generate_genesis_state(config)
 
     with open('hundred_validators_state.txt', 'r') as f:
-        state_bytes = f.readline()
+        state_bytes = f.read()
         state_bytes = bytes.fromhex(state_bytes)
 
     genesis_state = rlp.decode(state_bytes, BeaconState)
