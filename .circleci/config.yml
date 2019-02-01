@@ -258,6 +258,12 @@ jobs:
       - image: circleci/python:3.7
         environment:
           TOXENV: py37-integration
+  py37-simulation:
+    <<: *common
+    docker:
+      - image: circleci/python:3.7
+        environment:
+          TOXENV: py37-simulation
   py37-p2p:
     <<: *common
     docker:
@@ -320,6 +326,7 @@ workflows:
       # - py36-integration
       # - py36-lightchain_integration
       # - py36-long_run_integration
+      - py37-simulation
 
       - py36-lint
       - py37-lint
