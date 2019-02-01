@@ -131,12 +131,13 @@ class Validator(object):
         """ Print timestamp and validator_id as prefix
         """
         info = (
-            f"[{self.network.time}] [{self.local_timestamp}] [V {self.id}] "
+            f"[{self.network.time}] [{self.local_timestamp}] "
+            f"[S {self.current_slot}] [V {self.id}] "
             f"[B {self.chain.get_canonical_head().slot}] "
         )
         # Reduce file I/O
-        # self.output_buf += info
-        # self.output_buf += msg
+        self.output_buf += info
+        self.output_buf += msg
 
         # Print out immediately
         print(info, end='')

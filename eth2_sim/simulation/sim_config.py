@@ -1,20 +1,21 @@
 
 class Config(object):
     # Measuration Parameters
-    TOTAL_TICKS = 500
-    PRECISION = 0.5
+    TOTAL_TICKS = 50
+    PRECISION = 1
     INITIAL_TIMESTAMP = 1
 
     # Acceleration Parameters
     MINIMIZE_CHECKING = True
 
     # System Parameters
-    NUM_VALIDATORS = 100
+    NUM_VALIDATORS = 50
+    GENERATE_STATE = True
 
     # Network Parameters
     LATENCY = 1.5 / PRECISION
-    RELIABILITY = 0.9
-    NUM_PEERS = 5
+    RELIABILITY = 1.0
+    NUM_PEERS = 10
     SHARD_NUM_PEERS = 5
     TARGET_TOTAL_TPS = 1
     MEAN_TX_ARRIVAL_TIME = ((1 / TARGET_TOTAL_TPS) * PRECISION) * NUM_VALIDATORS

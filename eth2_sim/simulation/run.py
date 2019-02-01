@@ -50,13 +50,14 @@ def simulation():
     # Something bad. :'(
     config = config._replace(
         EPOCH_LENGTH=8,
-        TARGET_COMMITTEE_SIZE=32,
-        SHARD_COUNT=4,
+        TARGET_COMMITTEE_SIZE=8,
+        SHARD_COUNT=16,
         MIN_ATTESTATION_INCLUSION_DELAY=2,
     )
 
     # Write to file
-    # generate_genesis_state(config, keymap, p.NUM_VALIDATORS)
+    if p.GENERATE_STATE:
+        generate_genesis_state(config, keymap, p.NUM_VALIDATORS)
 
     with open('hundred_validators_state.txt', 'r') as f:
         state_bytes = f.read()
@@ -112,8 +113,8 @@ def simulation():
         print('------ Validator Parameters ------')
         print('Validator clock offset: {}'.format(p.TIME_OFFSET))
         print('Probability of validator failure to make a block: {}'.format(
-            p.PROB_CREATE_BLOCK_SUCCESS)
-        )
+            p.PROB_CREATE_BLOCK_SUCCESS
+        ))
         print('Targe block time: {} sec'.format(p.TARGET_BLOCK_TIME))
         print('Mean mining time: {} sec'.format(p.MEAN_MINING_TIME))
         print('------ Result ------')
