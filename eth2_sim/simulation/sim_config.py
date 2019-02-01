@@ -1,16 +1,17 @@
 
 class Config(object):
     # Measuration Parameters
-    TOTAL_TICKS = 50
+    TOTAL_TICKS = 80
     PRECISION = 1
     INITIAL_TIMESTAMP = 1
 
     # Acceleration Parameters
     MINIMIZE_CHECKING = True
+    GENERATE_STATE = False
+    LOGGING_NETWORK = True
 
     # System Parameters
     NUM_VALIDATORS = 50
-    GENERATE_STATE = True
 
     # Network Parameters
     LATENCY = 1.5 / PRECISION

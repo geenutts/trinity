@@ -48,7 +48,7 @@ from sim_config import Config as p
 def format_receiving(f):
         @functools.wraps(f)
         def wrapper(self, obj, network_id, sender_id):
-            self.print_info(
+            self.print_network_info(
                 f'Receiving {type(obj).__name__} {obj} from [V {sender_id}]'
             )
             result = f(self, obj, network_id, sender_id)
@@ -143,19 +143,23 @@ class Validator(object):
         print(info, end='')
         print(msg)
 
+    def print_network_info(self, msg):
+        if p.LOGGING_NETWORK:
+            self.print_info(msg)
+
     def buffer_to_output(self):
         print(self.output_buf)
         self.output_buf = ''
 
     def format_direct_send(self, network_id, peer_id, obj, content=None):
         self.network.direct_send(self, peer_id, obj, network_id=network_id)
-        self.print_info(
+        self.print_network_info(
             f'Sent V {peer_id} with {obj} @network_id: {network_id}, content: {content}'
         )
 
     def format_broadcast(self, network_id, obj, content=None):
         self.network.broadcast(self, obj, network_id=network_id)
-        self.print_info(
+        self.print_network_info(
             f'Broadcasted a {obj} @network_id: {network_id}, content: {content} '
             f'peers: {self.network.get_peers(self, network_id)}'
         )
@@ -228,13 +232,29 @@ class Validator(object):
 
     def tick_main(self, init_cycle=False):
         if self.current_slot not in self.handled_slots:
+            # TODO: lookahead
             if self.is_proposer(self.current_slot):
                 self.print_info(f"I'm the proposer of slot {self.current_slot}")
                 self.propose_block()
+            if self.is_attester(self.current_slot):
+                self.print_info(f"I'm the attester of slot {self.current_slot}")
+                # TODO
 
             self.handled_slots.add(self.current_slot)
 
     def is_proposer(self, slot):
+        beacon_proposer_index = get_beacon_proposer_index(
+            self.state.copy(
+                slot=slot,
+            ),
+            slot,
+            self.config.EPOCH_LENGTH,
+            self.config.TARGET_COMMITTEE_SIZE,
+            self.config.SHARD_COUNT,
+        )
+        return beacon_proposer_index == self.validator_index
+
+    def is_attester(self, slot):
         beacon_proposer_index = get_beacon_proposer_index(
             self.state.copy(
                 slot=slot,
