@@ -5,6 +5,8 @@ from typing import (  # noqa: F401
     Union,
 )
 
+import functools
+
 from eth_utils import (
     big_endian_to_int,
     ValidationError,
@@ -204,6 +206,7 @@ def privtopub(k: int) -> BLSPubkey:
     return G1_to_pubkey(compress_G1(multiply(G1, k)))
 
 
+@functools.lru_cache(128)
 def verify(message: bytes, pubkey: BLSPubkey, signature: BLSSignature, domain: int) -> bool:
     try:
         final_exponentiation = final_exponentiate(
