@@ -294,32 +294,32 @@ workflows:
   version: 2
   test:
     jobs:
-      - py36-docs
+      # - py36-docs
 
-      - py37-core
-      - py37-wheel-cli
-      - py37-p2p
+      # - py37-core
+      # - py37-wheel-cli
+      # - py37-p2p
       - py37-eth2
       - py37-libp2p
 
-      - py36-rpc-state-byzantium
-      - py36-rpc-state-constantinople
-      - py36-rpc-state-frontier
-      - py36-rpc-state-homestead
-      - py36-rpc-state-tangerine_whistle
-      - py36-rpc-state-spurious_dragon
-      - py36-rpc-state-quadratic
-      - py36-rpc-blockchain
+      # - py36-rpc-state-byzantium
+      # - py36-rpc-state-constantinople
+      # - py36-rpc-state-frontier
+      # - py36-rpc-state-homestead
+      # - py36-rpc-state-tangerine_whistle
+      # - py36-rpc-state-spurious_dragon
+      # - py36-rpc-state-quadratic
+      # - py36-rpc-blockchain
 
-      - py36-core
-      - py36-wheel-cli
-      - py36-p2p
+      # - py36-core
+      # - py36-wheel-cli
+      # - py36-p2p
       - py36-eth2
       - py36-libp2p
 
-      - py36-integration
-      - py36-lightchain_integration
-      - py36-long_run_integration
+      # - py36-integration
+      # - py36-lightchain_integration
+      # - py36-long_run_integration
 
       - py36-lint
       - py37-lint
