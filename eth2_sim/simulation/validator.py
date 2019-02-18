@@ -13,7 +13,10 @@ from eth.exceptions import (
 from eth2.beacon.constants import (
     GENESIS_PARENT_ROOT,
 )
-from eth2.beacon.helpers import (
+from eth2.beacon.configs import (
+    CommitteeConfig,
+)
+from eth2.beacon.committee_helpers import (
     get_beacon_proposer_index,
 )
 
@@ -248,9 +251,7 @@ class Validator(object):
                 slot=slot,
             ),
             slot,
-            self.config.EPOCH_LENGTH,
-            self.config.TARGET_COMMITTEE_SIZE,
-            self.config.SHARD_COUNT,
+            CommitteeConfig(self.config),
         )
         return beacon_proposer_index == self.validator_index
 
@@ -260,9 +261,7 @@ class Validator(object):
                 slot=slot,
             ),
             slot,
-            self.config.EPOCH_LENGTH,
-            self.config.TARGET_COMMITTEE_SIZE,
-            self.config.SHARD_COUNT,
+            CommitteeConfig(self.config),
         )
         return beacon_proposer_index == self.validator_index
 

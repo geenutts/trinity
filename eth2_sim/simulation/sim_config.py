@@ -11,7 +11,7 @@ class Config(object):
     LOGGING_NETWORK = True
 
     # System Parameters
-    NUM_VALIDATORS = 50
+    NUM_VALIDATORS = 100
 
     # Network Parameters
     LATENCY = 1.5 / PRECISION

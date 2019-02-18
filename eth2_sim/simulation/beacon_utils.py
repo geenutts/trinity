@@ -9,7 +9,7 @@ from eth2.beacon.types.deposit_input import DepositInput
 from eth2.beacon.types.eth1_data import Eth1Data
 
 from eth2.beacon.on_startup import (
-    get_initial_beacon_state,
+    get_genesis_beacon_state,
 )
 
 from eth2.beacon.types.forks import Fork
@@ -25,17 +25,16 @@ from eth2.beacon.tools.builder.validator import (
 
 def get_genesis_state(config, keymap, num_validators):
     withdrawal_credentials = b'\x22' * 32
-    randao_commitment = b'\x33' * 32
     custody_commitment = b'\x44' * 32
     fork = Fork(
         previous_version=config.GENESIS_FORK_VERSION,
         current_version=config.GENESIS_FORK_VERSION,
-        slot=config.GENESIS_SLOT,
+        epoch=config.GENESIS_EPOCH,
     )
     branch = tuple(b'\x11' * 32 for j in range(10))
 
     pubkeys = list(keymap)
-    initial_validator_deposits = (
+    genesis_validator_deposits = tuple(
         Deposit(
             branch=branch,
             index=i,
@@ -43,18 +42,15 @@ def get_genesis_state(config, keymap, num_validators):
                 deposit_input=DepositInput(
                     pubkey=pubkeys[i],
                     withdrawal_credentials=withdrawal_credentials,
-                    randao_commitment=randao_commitment,
-                    custody_commitment=custody_commitment,
                     proof_of_possession=sign_proof_of_possession(
                         deposit_input=DepositInput(
                             pubkey=pubkeys[i],
                             withdrawal_credentials=withdrawal_credentials,
-                            randao_commitment=randao_commitment,
-                            custody_commitment=custody_commitment,
                         ),
                         privkey=keymap[pubkeys[i]],
                         fork=fork,
                         slot=config.GENESIS_SLOT,
+                        epoch_length=config.EPOCH_LENGTH,
                     ),
                 ),
                 amount=config.MAX_DEPOSIT_AMOUNT,
@@ -67,14 +63,16 @@ def get_genesis_state(config, keymap, num_validators):
     latest_eth1_data = Eth1Data.create_empty_data()
     genesis_time = 0
 
-    return get_initial_beacon_state(
-        initial_validator_deposits=initial_validator_deposits,
+    return get_genesis_beacon_state(
+        genesis_validator_deposits=genesis_validator_deposits,
         genesis_time=genesis_time,
         latest_eth1_data=latest_eth1_data,
         genesis_slot=config.GENESIS_SLOT,
+        genesis_epoch=config.GENESIS_EPOCH,
         genesis_fork_version=config.GENESIS_FORK_VERSION,
         genesis_start_shard=config.GENESIS_START_SHARD,
         shard_count=config.SHARD_COUNT,
+        seed_lookahead=config.SEED_LOOKAHEAD,
         latest_block_roots_length=config.LATEST_BLOCK_ROOTS_LENGTH,
         latest_index_roots_length=config.LATEST_INDEX_ROOTS_LENGTH,
         epoch_length=config.EPOCH_LENGTH,
