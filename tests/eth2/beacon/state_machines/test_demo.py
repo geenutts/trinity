@@ -1,4 +1,8 @@
+
+import json
 import pytest
+
+import rlp
 
 from eth2.beacon.db.chain import BeaconChainDB
 from eth2.beacon.state_machines.forks.serenity.blocks import (
@@ -24,7 +28,7 @@ from eth2.beacon.tools.builder.validator import (
         'shard_count'
     ),
     [
-        (20, 4, 2, 2, 2)
+        (100, 4, 2, 20, 2)
     ]
 )
 def test_demo(base_db,
@@ -53,7 +57,9 @@ def test_demo(base_db,
     chain_length = 3 * config.EPOCH_LENGTH
     attestations = ()
     blocks = (block,)
-    for current_slot in range(chain_length):
+    states = (state,)
+
+    for current_slot in range(1, chain_length):
         # two epochs
         block = create_mock_block(
             state=state,
@@ -85,6 +91,7 @@ def test_demo(base_db,
         chaindb.persist_block(block, SerenityBeaconBlock)
 
         blocks += (block,)
+        states += (state,)
         if current_slot > config.MIN_ATTESTATION_INCLUSION_DELAY:
             attestation_slot = current_slot - config.MIN_ATTESTATION_INCLUSION_DELAY
             attestations = create_mock_signed_attestations_at_slot(
@@ -99,3 +106,19 @@ def test_demo(base_db,
 
     assert state.slot == chain_length - 1
     assert isinstance(sm.block, SerenityBeaconBlock)
+
+    serialzed_blocks = [
+        rlp.encode(block).hex()
+        for block in blocks
+    ]
+
+    serialzed_states = [
+        rlp.encode(state).hex()
+        for state in states
+    ]
+
+    with open('demo_blocks.json', 'w') as outfile:
+        json.dump(serialzed_blocks, outfile)
+
+    with open('demo_states.json', 'w') as outfile:
+        json.dump(serialzed_states, outfile)
