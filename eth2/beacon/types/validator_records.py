@@ -6,6 +6,8 @@ from ssz.sedes import (
     bytes_sedes,
     bytes32,
     uint64,
+    bytes96,
+    bytes48,
 )
 
 from eth2.beacon.constants import (
@@ -21,7 +23,7 @@ class ValidatorRecord(ssz.Serializable):
 
     fields = [
         # BLS public key
-        ('pubkey', bytes_sedes),
+        ('pubkey', bytes48),
         # Withdrawal credentials
         ('withdrawal_credentials', bytes32),
         # Epoch when validator activated

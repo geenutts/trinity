@@ -1,4 +1,4 @@
-import rlp
+import ssz
 
 from eth2.beacon.chains.base import (
     BeaconChain,
@@ -85,7 +85,7 @@ def get_genesis_state(config, keymap, num_validators):
 def generate_genesis_state(config, pubkeys, num_validators):
     state = get_genesis_state(config, pubkeys, num_validators)
     with open('hundred_validators_state.txt', 'w') as f:
-        f.write(rlp.encode(state).hex())
+        f.write(ssz.encode(state).hex())
 
     return state
 

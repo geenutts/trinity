@@ -1,10 +1,11 @@
+import sys
 import cProfile
 import re
 
 import time
 import json
 
-import rlp
+import ssz
 
 from eth.db.atomic import AtomicDB
 
@@ -21,6 +22,27 @@ from eth2.beacon.tools.builder.validator import (
 )
 
 
+def get_size(obj, seen=None):
+    """Recursively finds size of objects"""
+    size = sys.getsizeof(obj)
+    if seen is None:
+        seen = set()
+    obj_id = id(obj)
+    if obj_id in seen:
+        return 0
+    # Important mark as seen *before* entering recursion to gracefully handle
+    # self-referential objects
+    seen.add(obj_id)
+    if isinstance(obj, dict):
+        size += sum([get_size(v, seen) for v in obj.values()])
+        size += sum([get_size(k, seen) for k in obj.keys()])
+    elif hasattr(obj, '__dict__'):
+        size += get_size(obj.__dict__, seen)
+    elif hasattr(obj, '__iter__') and not isinstance(obj, (str, bytes, bytearray)):
+        size += sum([get_size(i, seen) for i in obj])
+    return size
+
+
 def run():
     config = SERENITY_CONFIG
     config = config._replace(
@@ -35,13 +57,27 @@ def run():
     json_data = open('demo_blocks.json').read()
     encoded_blocks = json.loads(json_data)
     for block in encoded_blocks:
-        blocks += (rlp.decode(bytes.fromhex(block), SerenityBeaconBlock),)
+        blocks += (ssz.decode(bytes.fromhex(block), SerenityBeaconBlock),)
 
     json_data = open('demo_states.json').read()
     encoded_states = json.loads(json_data)
     for state in encoded_states:
-        states += (rlp.decode(bytes.fromhex(state), BeaconState),)
+        states += (ssz.decode(bytes.fromhex(state), BeaconState),)
         break
+
+    serialzed_state = ssz.encode(states[0])
+
+    with open('demo_binary_state_0.json', 'wb') as outfile:
+        outfile.write(serialzed_state)
+
+    genesis_state = states[0]
+    one_validator = states[0].validator_registry[0]
+    hundred_validators = states[0].validator_registry
+    print('size (genesis_state)', get_size(genesis_state))
+    print('size (one_validator)', get_size(one_validator))
+    print('size (hundred_validators)', get_size(hundred_validators))
+    print('size (99 validators)', get_size(hundred_validators[1:]))
+    print('size (98 validators)', get_size(hundred_validators[2:]))
 
     assert blocks[0].slot == 0
     assert blocks[0].parent_root == b'\x00' * 32
@@ -96,5 +132,3 @@ def benchmark(blocks, chain, config):
 if __name__ == "__main__":
     run()
     # cProfile.run('run()', filename="result.out", sort="cumulative")
-
-

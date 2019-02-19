@@ -2,7 +2,7 @@
 import json
 import pytest
 
-import rlp
+import ssz
 
 from eth2.beacon.db.chain import BeaconChainDB
 from eth2.beacon.state_machines.forks.serenity.blocks import (
@@ -52,6 +52,12 @@ def test_demo(base_db,
 
     state = genesis_state
     block = genesis_block
+
+    serialzed_validator = ssz.encode(state.validator_registry)
+
+    with open('demo_validator.json', 'wb') as outfile:
+        outfile.write(serialzed_validator)
+        # json.dump(serialzed_validator, outfile)
 
     current_slot = 1
     chain_length = 3 * config.EPOCH_LENGTH
@@ -108,12 +114,12 @@ def test_demo(base_db,
     assert isinstance(sm.block, SerenityBeaconBlock)
 
     serialzed_blocks = [
-        rlp.encode(block).hex()
+        ssz.encode(block).hex()
         for block in blocks
     ]
 
     serialzed_states = [
-        rlp.encode(state).hex()
+        ssz.encode(state).hex()
         for state in states
     ]
 

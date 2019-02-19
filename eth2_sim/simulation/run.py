@@ -1,5 +1,5 @@
 import time
-import rlp
+import ssz
 
 import eth2._utils.bls as bls
 from eth2.beacon._utils.hash import hash_eth2
@@ -63,7 +63,7 @@ def simulation():
         state_bytes = f.read()
         state_bytes = bytes.fromhex(state_bytes)
 
-    genesis_state = rlp.decode(state_bytes, BeaconState)
+    genesis_state = ssz.decode(state_bytes, BeaconState)
     genesis_block = get_genesis_block(
         genesis_state.root,
         genesis_slot=config.GENESIS_SLOT,
