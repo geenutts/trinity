@@ -1,3 +1,6 @@
+import cProfile
+import re
+
 import time
 import json
 
@@ -38,6 +41,7 @@ def run():
     encoded_states = json.loads(json_data)
     for state in encoded_states:
         states += (rlp.decode(bytes.fromhex(state), BeaconState),)
+        break
 
     assert blocks[0].slot == 0
     assert blocks[0].parent_root == b'\x00' * 32
@@ -48,32 +52,37 @@ def run():
         chain.import_block(blocks[i])
         print(f'block {blocks[i].slot}, attestations={blocks[i].body.attestations}')
 
-    assert len(states[10].validator_registry) == 100
-    assignment = get_next_epoch_committee_assignment(
-        state=states[3],
-        config=config,
-        validator_index=0,
-        registry_change=False,
-    )
-    print('len(assignment.committee)', len(assignment.committee))
-    print('assignment.committee', assignment.committee)
+    assert len(states[0].validator_registry) == 100
 
+    # assignment = get_next_epoch_committee_assignment(
+    #     state=states[3],
+    #     config=config,
+    #     validator_index=0,
+    #     registry_change=False,
+    # )
+    # print('len(assignment.committee)', len(assignment.committee))
+    # print('assignment.committee', assignment.committee)
+
+    benchmark(blocks, chain, config)
+
+
+def benchmark(blocks, chain, config):
     start = time.time()
     print('----start time----')
     for i in range(4, 8):
-        if (states[i].slot + 1) % config.EPOCH_LENGTH == 0:
+        if (blocks[i].slot + 1) % config.EPOCH_LENGTH == 0:
             start_epoch = time.time()
         chain.import_block(blocks[i])
-        if (states[i].slot + 1) % config.EPOCH_LENGTH == 0:
+        if (blocks[i].slot + 1) % config.EPOCH_LENGTH == 0:
             end_epoch = time.time()
             print(f'epoch processing time: {end_epoch - start_epoch}')
         print(f'block {blocks[i].slot}, attestations={blocks[i].body.attestations}')
 
     for i in range(8, 12):
-        if (states[i].slot + 1) % config.EPOCH_LENGTH == 0:
+        if (blocks[i].slot + 1) % config.EPOCH_LENGTH == 0:
             start_epoch = time.time()
         chain.import_block(blocks[i])
-        if (states[i].slot + 1) % config.EPOCH_LENGTH == 0:
+        if (blocks[i].slot + 1) % config.EPOCH_LENGTH == 0:
             end_epoch = time.time()
             print(f'epoch processing time: {end_epoch - start_epoch}')
         print(f'block {blocks[i].slot}, attestations={blocks[i].body.attestations}')
@@ -86,3 +95,6 @@ def run():
 
 if __name__ == "__main__":
     run()
+    # cProfile.run('run()', filename="result.out", sort="cumulative")
+
+
