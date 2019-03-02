@@ -51,7 +51,7 @@ class SerenityStateTransition(BaseStateTransition):
             if state.slot == block.slot:
                 state = self.per_block_transition(state, block, check_proposer_signature)
             if (state.slot + 1) % self.config.SLOTS_PER_EPOCH == 0:
-                state = self.per_epoch_transition(state, block)
+                state = self.per_epoch_transition(state)
 
         return state
 
@@ -87,7 +87,7 @@ class SerenityStateTransition(BaseStateTransition):
 
         return state
 
-    def per_epoch_transition(self, state: BeaconState, block: BaseBeaconBlock) -> BeaconState:
+    def per_epoch_transition(self, state: BeaconState) -> BeaconState:
         # TODO: state = process_eth1_data_votes(state, self.config)
         state = process_justification(state, self.config)
         state = process_crosslinks(state, self.config)
