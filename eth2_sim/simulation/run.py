@@ -1,9 +1,11 @@
+import asyncio
+
 import time
-import rlp
+import ssz
 
 import eth2._utils.bls as bls
 from eth2.beacon._utils.hash import hash_eth2
-from eth2.beacon.on_startup import (
+from eth2.beacon.on_genesis import (
     get_genesis_block,
 )
 from eth2.beacon.state_machines.forks.serenity.blocks import (
@@ -49,7 +51,7 @@ def simulation():
 
     # Something bad. :'(
     config = config._replace(
-        EPOCH_LENGTH=8,
+        SLOTS_PER_EPOCH=8,
         TARGET_COMMITTEE_SIZE=8,
         SHARD_COUNT=16,
         MIN_ATTESTATION_INCLUSION_DELAY=2,
@@ -63,7 +65,7 @@ def simulation():
         state_bytes = f.read()
         state_bytes = bytes.fromhex(state_bytes)
 
-    genesis_state = rlp.decode(state_bytes, BeaconState)
+    genesis_state = ssz.decode(state_bytes, BeaconState)
     genesis_block = get_genesis_block(
         genesis_state.root,
         genesis_slot=config.GENESIS_SLOT,
@@ -127,7 +129,6 @@ def simulation():
             progress(i, p.TOTAL_TICKS, status='Simulating.....')
 
             network.tick()
-
             if i % 100 == 0:
                 print('%d ticks passed' % i)
                 # print_status()

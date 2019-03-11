@@ -1,30 +1,25 @@
-import rlp
-from rlp.sedes import (
-    BigEndianInt,
-    CountableList,
+import ssz
+from ssz.sedes import (
+    List,
+    bytes32,
+    uint64,
 )
 from eth2.beacon._utils.hash import (
     hash_eth2,
-)
-from eth2.beacon.sedes import (
-    hash32,
 )
 from eth2.beacon.state_machines.forks.serenity.blocks import (
     SerenityBeaconBlock,
 )
 
 
-uint256 = BigEndianInt(256)
-
-
-class GetBlocksRequest(rlp.Serializable):
+class GetBlocksRequest(ssz.Serializable):
     """ Simplified Wire protocol
     Removed `skip` and `reverse` fields for now
     """
     fields = [
-        ('timestamp', uint256),
-        ('block_root', hash32),
-        ('amount', rlp.sedes.big_endian_int)
+        ('timestamp', uint64),
+        ('block_root', bytes32),
+        ('amount', uint64)
     ]
 
     def __init__(self, timestamp, block_root, amount):
@@ -44,11 +39,11 @@ class GetBlocksRequest(rlp.Serializable):
         )
 
 
-class GetBlocksResponse(rlp.Serializable):
+class GetBlocksResponse(ssz.Serializable):
     """ Returns a list of SerenityBeaconBlock
     """
     fields = [
-        ('blocks', CountableList(SerenityBeaconBlock)),
+        ('blocks', List(SerenityBeaconBlock)),
     ]
 
     def __init__(self, blocks):

@@ -47,7 +47,6 @@ from message import (
 from sim_config import Config as p
 
 
-
 def format_receiving(f):
         @functools.wraps(f)
         def wrapper(self, obj, network_id, sender_id):
@@ -102,11 +101,11 @@ class Validator(object):
 
     @property
     def current_slot(self):
-        return (self.local_timestamp - self.genesis_time) // self.config.SLOT_DURATION
+        return (self.local_timestamp - self.genesis_time) // self.config.SECONDS_PER_SLOT
 
     @property
     def current_epoch(self):
-        return self.current_slot // self.config.EPOCH_LENGTH
+        return self.current_slot // self.config.SLOTS_PER_EPOCH
 
     @property
     def head(self):
@@ -170,7 +169,7 @@ class Validator(object):
     #
     # Messages
     #
-    def on_receive(self, obj, network_id, sender_id):
+    async def on_receive(self, obj, network_id, sender_id):
         if isinstance(obj, list):
             for _obj in obj:
                 self.on_receive(_obj, network_id, sender_id)
@@ -230,10 +229,10 @@ class Validator(object):
             for block in obj.blocks:
                 self.chain.imprt(block)
 
-    def tick(self):
-        self.tick_main()
+    async def tick(self):
+        await self.tick_main()
 
-    def tick_main(self, init_cycle=False):
+    async def tick_main(self, init_cycle=False):
         if self.current_slot not in self.handled_slots:
             # TODO: lookahead
             if self.is_proposer(self.current_slot):

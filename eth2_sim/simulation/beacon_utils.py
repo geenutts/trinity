@@ -1,4 +1,4 @@
-import rlp
+import ssz
 
 from eth2.beacon.chains.base import (
     BeaconChain,
@@ -8,7 +8,7 @@ from eth2.beacon.types.deposit_data import DepositData
 from eth2.beacon.types.deposit_input import DepositInput
 from eth2.beacon.types.eth1_data import Eth1Data
 
-from eth2.beacon.on_startup import (
+from eth2.beacon.on_genesis import (
     get_genesis_beacon_state,
 )
 
@@ -50,7 +50,7 @@ def get_genesis_state(config, keymap, num_validators):
                         privkey=keymap[pubkeys[i]],
                         fork=fork,
                         slot=config.GENESIS_SLOT,
-                        epoch_length=config.EPOCH_LENGTH,
+                        slots_per_epoch=config.SLOTS_PER_EPOCH,
                     ),
                 ),
                 amount=config.MAX_DEPOSIT_AMOUNT,
@@ -72,21 +72,21 @@ def get_genesis_state(config, keymap, num_validators):
         genesis_fork_version=config.GENESIS_FORK_VERSION,
         genesis_start_shard=config.GENESIS_START_SHARD,
         shard_count=config.SHARD_COUNT,
-        seed_lookahead=config.SEED_LOOKAHEAD,
+        min_seed_lookahead=config.MIN_SEED_LOOKAHEAD,
         latest_block_roots_length=config.LATEST_BLOCK_ROOTS_LENGTH,
-        latest_index_roots_length=config.LATEST_INDEX_ROOTS_LENGTH,
-        epoch_length=config.EPOCH_LENGTH,
+        latest_active_index_roots_length=config.LATEST_ACTIVE_INDEX_ROOTS_LENGTH,
+        slots_per_epoch=config.SLOTS_PER_EPOCH,
         max_deposit_amount=config.MAX_DEPOSIT_AMOUNT,
-        latest_penalized_exit_length=config.LATEST_PENALIZED_EXIT_LENGTH,
+        latest_slashed_exit_length=config.LATEST_SLASHED_EXIT_LENGTH,
         latest_randao_mixes_length=config.LATEST_RANDAO_MIXES_LENGTH,
-        entry_exit_delay=config.ENTRY_EXIT_DELAY,
+        activation_exit_delay=config.ACTIVATION_EXIT_DELAY,
     )
 
 
 def generate_genesis_state(config, pubkeys, num_validators):
     state = get_genesis_state(config, pubkeys, num_validators)
     with open('hundred_validators_state.txt', 'w') as f:
-        f.write(rlp.encode(state).hex())
+        f.write(ssz.encode(state).hex())
 
     return state
 
@@ -117,85 +117,3 @@ def get_chain(config, genesis_state, genesis_block, base_db):
     )
     assert chain.get_canonical_block_by_slot(0) == genesis_block
     return chain
-
-#
-# Main
-#
-# def sim(keymap):
-#     config = SERENITY_CONFIG
-
-#     # Something bad. :'(
-#     config = config._replace(
-#         EPOCH_LENGTH=8,
-#         TARGET_COMMITTEE_SIZE=32,
-#         SHARD_COUNT=4,
-#         MIN_ATTESTATION_INCLUSION_DELAY=2,
-#     )
-
-#     genesis_state = generate_genesis_state(config, keymap)
-
-#     with open('hundred_validators_state.txt', 'r') as f:
-#         state_bytes = f.read()
-#         state_bytes = bytes.fromhex(state_bytes)
-
-#     genesis_state = rlp.decode(state_bytes, BeaconState)
-
-#     genesis_block = get_genesis_block(
-#         genesis_state.root,
-#         genesis_slot=config.GENESIS_SLOT,
-#         block_class=SerenityBeaconBlock,
-#     )
-#     assert genesis_block.slot == 0
-
-#     base_db = AtomicDB()
-#     chain = get_chain(config, genesis_state, genesis_block, base_db)
-
-#     blocks = (genesis_block,)
-#     state = genesis_state
-#     num_slots = config.EPOCH_LENGTH * 3
-
-#     attestations = ()
-#     for current_slot in range(1, num_slots):
-
-#         # Propose a block
-#         block = create_mock_block(
-#             state=state,
-#             config=config,
-#             state_machine=chain.get_state_machine(blocks[-1]),
-#             block_class=SerenityBeaconBlock,
-#             parent_block=blocks[-1],
-#             keymap=keymap,
-#             slot=current_slot,
-#             attestations=attestations,
-#         )
-
-#         # Put to chain
-#         chain.import_block(block)
-#         state = chain.get_state_machine(block).state
-
-
-#         assert block != genesis_block
-#         assert block == chain.get_canonical_block_by_slot(current_slot)
-
-
-#         blocks += (block,)
-#         print(
-#             f"{block}: slot={block.slot}"
-#             f"\t{state}: slot={state.slot}"
-#         )
-
-#         if current_slot > config.MIN_ATTESTATION_INCLUSION_DELAY:
-#             attestation_slot = current_slot - config.MIN_ATTESTATION_INCLUSION_DELAY
-#             attestations = create_mock_signed_attestations_at_slot(
-#                 state,
-#                 config,
-#                 attestation_slot,
-#                 keymap,
-#                 1.0,
-#             )
-#         else:
-#             attestations = ()
-
-
-# if __name__ == '__main__':
-#     sim()

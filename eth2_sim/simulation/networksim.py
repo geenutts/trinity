@@ -1,5 +1,5 @@
 import random
-import threading
+import asyncio
 
 from distributions import (
     transform,
@@ -7,44 +7,13 @@ from distributions import (
 )
 
 
-class TickThread(threading.Thread):
-    def __init__(self, validator):
-        self.validator = validator
-        threading.Thread.__init__(self)
-
-    def run(self):
-        self.validator.tick()
-
-    def terminate(self):
-        if self.validator.output_buf:
-            self.validator.buffer_to_output()
-
-
-class ReceivingThread(threading.Thread):
-    def __init__(self, recipient, obj, network_id, sender):
-        self.recipient = recipient
-        threading.Thread.__init__(self)
-        self.obj = obj
-        self.network_id = network_id
-        self.sender = sender
-
-    def run(self):
-        self.recipient.on_receive(self.obj, self.network_id, self.sender)
-
-    def terminate(self):
-        if self.recipient.output_buf:
-            self.recipient.buffer_to_output()
-
-
 class NetworkSimulator():
-
     def __init__(self, latency=50, reliability=0.9):
         self.agents = []
         self.latency_distribution_sample = transform(
             normal_distribution(latency, (latency * 2) // 5),
             lambda x: max(x, 0),
         )
-        # 1 unit = 0.01 sec
         self.time = 0
         self.objqueue = {}
         self.peers = {}
@@ -93,22 +62,25 @@ class NetworkSimulator():
 
     def tick(self):
         if self.time in self.objqueue:
-            for recipient, obj, network_id, sender in self.objqueue[self.time]:
-                if random.random() < self.reliability:
-                    # recipient.on_receive(obj, network_id, sender)
-                    t = ReceivingThread(recipient, obj, network_id, sender)
-                    t.start()
-                    t.terminate()
-                    t.join()
-
+            loop = asyncio.get_event_loop()
+            tasks = [
+                recipient.on_receive(obj, network_id, sender)
+                for recipient, obj, network_id, sender in self.objqueue[self.time]
+                if random.random() < self.reliability
+            ]
+            loop.run_until_complete(
+                asyncio.gather(*tasks)
+            )
             del self.objqueue[self.time]
-        for a in self.agents:
-            # a.tick()
-            t = TickThread(a)
-            t.start()
-            t.terminate()
-            t.join()
 
+        loop = asyncio.get_event_loop()
+        tasks = [
+            loop.create_task(a.tick())
+            for a in self.agents
+        ]
+        loop.run_until_complete(
+            asyncio.gather(*tasks)
+        )
         self.time += 1
 
     def run(self, steps):

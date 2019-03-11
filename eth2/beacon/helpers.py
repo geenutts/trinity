@@ -4,6 +4,7 @@ from typing import (
     TYPE_CHECKING,
 )
 
+import functools
 
 from eth_utils import (
     ValidationError,
