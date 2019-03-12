@@ -105,7 +105,7 @@ def get_chain(config, genesis_state, genesis_block, base_db):
     klass = BeaconChain.configure(
         __name__='TestChain',
         sm_configuration=(
-            (0, get_sm_class(config)),
+            (config.GENESIS_SLOT, get_sm_class(config)),
         ),
         chain_id=5566,
     )
@@ -115,5 +115,4 @@ def get_chain(config, genesis_state, genesis_block, base_db):
         genesis_state=genesis_state,
         genesis_block=genesis_block,
     )
-    assert chain.get_canonical_block_by_slot(0) == genesis_block
     return chain

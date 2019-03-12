@@ -51,7 +51,9 @@ def simulation():
 
     # Something bad. :'(
     config = config._replace(
-        SLOTS_PER_EPOCH=8,
+        SLOTS_PER_EPOCH=p.SLOTS_PER_EPOCH,
+        GENESIS_SLOT=2**32,
+        GENESIS_EPOCH=2**32 // p.SLOTS_PER_EPOCH,
         TARGET_COMMITTEE_SIZE=8,
         SHARD_COUNT=16,
         MIN_ATTESTATION_INCLUSION_DELAY=2,

@@ -8,7 +8,10 @@ class Config(object):
     # Acceleration Parameters
     MINIMIZE_CHECKING = True
     GENERATE_STATE = False
-    LOGGING_NETWORK = True
+    LOGGING_NETWORK = False
+
+    # SPEC Parameters
+    SLOTS_PER_EPOCH = 8
 
     # System Parameters
     NUM_VALIDATORS = 100
