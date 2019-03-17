@@ -4,7 +4,6 @@ from typing import (
     TYPE_CHECKING,
 )
 
-import functools
 
 from eth_utils import (
     ValidationError,
@@ -78,7 +77,6 @@ def _get_block_root(
     return latest_block_roots[slot % latest_block_roots_length]
 
 
-@functools.lru_cache(128)
 def get_block_root(
         state: 'BeaconState',
         slot: Slot,

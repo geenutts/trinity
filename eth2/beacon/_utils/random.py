@@ -1,4 +1,3 @@
-import functools
 
 from typing import (
     Iterable,
@@ -67,7 +66,6 @@ def get_permuted_index(index: int,
     return new_index
 
 
-@functools.lru_cache(maxsize=128, typed=False)
 @to_tuple
 def shuffle(values: Sequence[TItem],
             seed: Hash32,
