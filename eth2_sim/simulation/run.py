@@ -119,8 +119,6 @@ def simulation():
         print('Probability of validator failure to make a block: {}'.format(
             p.PROB_CREATE_BLOCK_SUCCESS
         ))
-        print('Targe block time: {} sec'.format(p.TARGET_BLOCK_TIME))
-        print('Mean mining time: {} sec'.format(p.MEAN_MINING_TIME))
         print('------ Result ------')
         # print_status()
         print("--- %s seconds ---" % (time.time() - start_time))
