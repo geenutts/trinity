@@ -101,7 +101,10 @@ class Validator(object):
 
     @property
     def current_slot(self):
-        return (self.local_timestamp - self.genesis_time) // self.config.SECONDS_PER_SLOT + self.config.GENESIS_SLOT
+        return (
+            (self.local_timestamp - self.genesis_time) //
+            self.config.SECONDS_PER_SLOT + self.config.GENESIS_SLOT
+        )
 
     @property
     def current_epoch(self):

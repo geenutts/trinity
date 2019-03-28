@@ -1,9 +1,7 @@
-import asyncio
-
 import time
 import ssz
 
-import eth2._utils.bls as bls
+import py_ecc.bls as bls
 from eth2.beacon._utils.hash import hash_eth2
 from eth2.beacon.on_genesis import (
     get_genesis_block,

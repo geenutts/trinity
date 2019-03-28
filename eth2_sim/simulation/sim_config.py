@@ -14,7 +14,7 @@ class Config(object):
     SLOTS_PER_EPOCH = 8
 
     # System Parameters
-    NUM_VALIDATORS = 100
+    NUM_VALIDATORS = 8
 
     # Network Parameters
     LATENCY = 1.5 / PRECISION
