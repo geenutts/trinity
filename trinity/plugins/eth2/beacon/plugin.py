@@ -50,7 +50,7 @@ from trinity.plugins.eth2.beacon.testing_blocks_generators import (
     get_ten_blocks_context,
 )
 
-from eth2.beacon.configs import BeaconConfig
+from eth2.configs import Eth2Config
 from trinity.plugins.eth2.beacon.testing_blocks_generators import (
     config as testing_config,
     index_to_pubkey,
@@ -128,7 +128,7 @@ class BeaconNodePlugin(BaseIsolatedPlugin):
         validator_privkey = keymap[index_to_pubkey[self.context.args.validator_index]]
         validator = Validator(
             validator_index=self.context.args.validator_index,
-            beacon_config=testing_config,
+            eth2_config=testing_config,
             chain=chain,
             peer_pool=server.peer_pool,
             privkey=validator_privkey,
@@ -167,12 +167,12 @@ class Validator:
     def __init__(
             self,
             validator_index: int,
-            beacon_config: BeaconConfig,
+            eth2_config: Eth2Config,
             chain: BeaconChain,
             peer_pool: BCCPeerPool,
             privkey: PrivateKey) -> None:
         self.validator_index = validator_index
-        self.beacon_config = beacon_config
+        self.eth2_config = eth2_config
         self.chain = chain
         self.peer_pool = peer_pool
         self.privkey = privkey
@@ -184,13 +184,13 @@ class Validator:
         self.propose_block(slot=slot)
 
     def propose_block(self, slot: int) -> None:
-        assert slot > self.beacon_config.GENESIS_SLOT
+        assert slot > self.eth2_config.GENESIS_SLOT
         parent_block = self._get_caononical_head()
         # state_machine = self._get_head_state_machine()
         # state = self._get_head_state()
         sm_class = SerenityStateMachine.configure(
             __name__='SerenityStateMachineForTesting',
-            config=self.beacon_config,
+            config=self.eth2_config,
         )
         state_machine = sm_class(
             self.chain.chaindb,
@@ -203,7 +203,7 @@ class Validator:
             state,
             slot,
             parent_block.root,
-            self.beacon_config,
+            self.eth2_config,
         )
         if self.validator_index == proposer_index:
             block = self._make_proposing_block(slot, state, state_machine, parent_block)
@@ -226,7 +226,7 @@ class Validator:
                               parent_block: BaseBeaconBlock) -> BaseBeaconBlock:
         return create_block_on_state(
             state=state,
-            config=self.beacon_config,
+            config=self.eth2_config,
             state_machine=state_machine,
             block_class=SerenityBeaconBlock,
             parent_block=parent_block,
