@@ -13,6 +13,7 @@ from eth_utils import (
 import ssz
 from ssz.sedes import (
     List,
+    Vector,
     bytes32,
     uint64,
 )
@@ -82,7 +83,7 @@ class BeaconState(ssz.Serializable):
         ('finalized_root', bytes32),
 
         # Recent state
-        ('latest_crosslinks', List(CrosslinkRecord)),
+        ('latest_crosslinks', Vector(CrosslinkRecord, 1024)),
         ('latest_block_roots', List(bytes32)),  # Needed to process attestations, older to newer  # noqa: E501
         ('latest_state_roots', List(bytes32)),
         ('latest_active_index_roots', List(bytes32)),
@@ -141,6 +142,7 @@ class BeaconState(ssz.Serializable):
             raise ValueError(
                 "The length of validator_registry and validator_balances should be the same."
             )
+
         super().__init__(
             # Misc
             slot=slot,

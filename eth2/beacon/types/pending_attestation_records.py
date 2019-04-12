@@ -1,6 +1,6 @@
 import ssz
 from ssz.sedes import (
-    bytes_sedes,
+    byte_list,
     uint64,
 )
 
@@ -20,9 +20,9 @@ class PendingAttestationRecord(ssz.Serializable):
         # Signed data
         ('data', AttestationData),
         # Attester aggregation bitfield
-        ('aggregation_bitfield', bytes_sedes),
+        ('aggregation_bitfield', byte_list),
         # Custody bitfield
-        ('custody_bitfield', bytes_sedes),
+        ('custody_bitfield', byte_list),
         # Slot the attestation was included
         ('slot_included', uint64),
     ]

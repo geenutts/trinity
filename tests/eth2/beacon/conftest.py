@@ -54,6 +54,12 @@ DEFAULT_RANDAO = b'\45' * 32
 DEFAULT_NUM_VALIDATORS = 40
 
 
+# SSZ
+@pytest.fixture(scope="function", autouse=True)
+def override_length(config):
+    BeaconState._meta.container_sedes.field_name_to_sedes["latest_crosslinks"].length = config.SHARD_COUNT
+
+
 @pytest.fixture(scope="session")
 def privkeys():
     """
@@ -154,7 +160,8 @@ def sample_genesis_block_class():
 
 
 @pytest.fixture
-def sample_beacon_state_params(genesis_slot,
+def sample_beacon_state_params(config,
+                               genesis_slot,
                                genesis_epoch,
                                sample_fork_params,
                                sample_eth1_data_params,
@@ -182,7 +189,7 @@ def sample_beacon_state_params(genesis_slot,
         'justification_bitfield': 0,
         'finalized_epoch': 0,
         'finalized_root': b'\x33' * 32,
-        'latest_crosslinks': (),
+        'latest_crosslinks': (CrosslinkRecord(**sample_crosslink_record_params),) * config.SHARD_COUNT,
         'latest_block_roots': (),
         'latest_state_roots': (),
         'latest_active_index_roots': (),

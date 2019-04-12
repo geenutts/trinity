@@ -75,7 +75,9 @@ def test_num_crosslink_records(expected,
 
 def test_hash(sample_beacon_state_params):
     state = BeaconState(**sample_beacon_state_params)
-    assert state.root == hash_eth2(ssz.encode(state))
+    encoded = ssz.encode(state)
+    result = ssz.decode(encoded, BeaconState)
+    assert result == state
 
 
 @pytest.mark.parametrize(
