@@ -61,7 +61,7 @@ class BeaconState(ssz.Serializable):
         ('validator_registry_update_epoch', uint64),
 
         # Randomness and committees
-        ('latest_randao_mixes', List(bytes32)),
+        ('latest_randao_mixes', Vector(bytes32, 1)),
         ('previous_shuffling_start_shard', uint64),
         ('current_shuffling_start_shard', uint64),
         ('previous_shuffling_epoch', uint64),
@@ -83,11 +83,11 @@ class BeaconState(ssz.Serializable):
         ('finalized_root', bytes32),
 
         # Recent state
-        ('latest_crosslinks', Vector(CrosslinkRecord, 1024)),
-        ('latest_block_roots', List(bytes32)),  # Needed to process attestations, older to newer  # noqa: E501
-        ('latest_state_roots', List(bytes32)),
-        ('latest_active_index_roots', List(bytes32)),
-        ('latest_slashed_balances', List(uint64)),  # Balances slashed at every withdrawal period  # noqa: E501
+        ('latest_crosslinks', Vector(CrosslinkRecord, 1)),
+        ('latest_block_roots', Vector(bytes32, 1)),  # Needed to process attestations, older to newer  # noqa: E501
+        ('latest_state_roots', Vector(bytes32, 1)),
+        ('latest_active_index_roots', Vector(bytes32, 1)),
+        ('latest_slashed_balances', Vector(uint64, 1)),  # Balances slashed at every withdrawal period  # noqa: E501
         ('latest_block_header', BeaconBlockHeader),
         ('historical_roots', List(bytes32)),  # allow for a log-sized Merkle proof from any block to any historical block root"  # noqa: E501
 
@@ -223,8 +223,7 @@ class BeaconState(ssz.Serializable):
                             latest_randao_mixes_length: int,
                             latest_slashed_exit_length: int,
                             activated_genesis_validators: Sequence[ValidatorRecord]=(),
-                            genesis_balances: Sequence[Gwei]=(),
-                            genesis_block_class: Type[BaseBeaconBlock]) -> 'BeaconState':
+                            genesis_balances: Sequence[Gwei]=()) -> 'BeaconState':
         return cls(
             # Misc
             slot=genesis_slot,
