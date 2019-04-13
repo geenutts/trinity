@@ -57,7 +57,7 @@ DEFAULT_NUM_VALIDATORS = 40
 # SSZ
 @pytest.fixture(scope="function", autouse=True)
 def override_length(config):
-    BeaconState._meta.container_sedes.field_name_to_sedes["latest_crosslinks"].length = config.SHARD_COUNT
+    BeaconState._meta.container_sedes.field_name_to_sedes["latest_crosslinks"].length = config.SHARD_COUNT  # noqa: E501
 
 
 @pytest.fixture(scope="session")
@@ -189,7 +189,10 @@ def sample_beacon_state_params(config,
         'justification_bitfield': 0,
         'finalized_epoch': 0,
         'finalized_root': b'\x33' * 32,
-        'latest_crosslinks': (CrosslinkRecord(**sample_crosslink_record_params),) * config.SHARD_COUNT,
+        'latest_crosslinks': (
+            (CrosslinkRecord(**sample_crosslink_record_params),) *
+            config.SHARD_COUNT
+        ),
         'latest_block_roots': (),
         'latest_state_roots': (),
         'latest_active_index_roots': (),

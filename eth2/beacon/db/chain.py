@@ -570,7 +570,9 @@ class BeaconChainDB(BaseBeaconChainDB):
         return self._get_state_by_root(self.db, state_root, state_class)
 
     @staticmethod
-    def _get_state_by_root(db: BaseDB, state_root: Hash32, state_class: Type[BeaconState]) -> BeaconState:
+    def _get_state_by_root(db: BaseDB,
+                           state_root: Hash32,
+                           state_class: Type[BeaconState]) -> BeaconState:
         """
         Return the requested beacon state as specified by state hash.
 
