@@ -129,7 +129,7 @@ class BaseBeaconChainDB(ABC):
     # Beacon State
     #
     @abstractmethod
-    def get_state_by_root(self, state_root: Hash32) -> BeaconState:
+    def get_state_by_root(self, state_root: Hash32, state_class: Type[BeaconState]) -> BeaconState:
         pass
 
     @abstractmethod
