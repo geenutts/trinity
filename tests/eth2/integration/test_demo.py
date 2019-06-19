@@ -137,7 +137,7 @@ def test_demo(base_db,
             attestation_pool,
             blocks[-1].slot,
         )
-        state, _ = sm.import_block(block)
+        state, _ = sm.import_block(block, state)
 
         chaindb.persist_state(state)
         chaindb.persist_block(block, SerenityBeaconBlock, fork_choice_scoring)
