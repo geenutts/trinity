@@ -168,7 +168,7 @@ def _get_slot_with_validator_selected(candidate_indices, state, config):
 async def test_validator_propose_block_succeeds(event_loop, event_bus):
     alice, bob = await get_linked_validators(event_loop=event_loop, event_bus=event_bus)
     state_machine = alice.chain.get_state_machine()
-    state = state_machine.state
+    state = alice.chain.get_head_state()
 
     slot, proposer_index = _get_slot_with_validator_selected(
         alice.validator_privkeys,
@@ -201,7 +201,7 @@ async def test_validator_propose_block_succeeds(event_loop, event_bus):
 async def test_validator_propose_block_fails(event_loop, event_bus):
     alice, bob = await get_linked_validators(event_loop=event_loop, event_bus=event_bus)
     state_machine = alice.chain.get_state_machine()
-    state = state_machine.state
+    state = alice.chain.get_head_state()
 
     assert set(alice.validator_privkeys).intersection(set(bob.validator_privkeys)) == set()
     slot, proposer_index = _get_slot_with_validator_selected(
@@ -225,7 +225,7 @@ async def test_validator_propose_block_fails(event_loop, event_bus):
 async def test_validator_skip_block(event_loop, event_bus):
     alice = await get_validator(event_loop=event_loop, event_bus=event_bus, indices=[0])
     state_machine = alice.chain.get_state_machine()
-    state = state_machine.state
+    state = alice.chain.get_head_state()
     slot = state.slot + 1
     post_state = alice.skip_block(
         slot=slot,
@@ -297,7 +297,7 @@ async def test_validator_handle_slot_tick(event_loop, event_bus, monkeypatch):
 async def test_validator_handle_first_tick(event_loop, event_bus, monkeypatch):
     alice, bob = await get_linked_validators(event_loop=event_loop, event_bus=event_bus)
     state_machine = alice.chain.get_state_machine()
-    state = state_machine.state
+    state = alice.chain.get_head_state()
 
     # test: `handle_first_tick` should call `propose_block` if the validator get selected
     slot_to_propose, index = _get_slot_with_validator_selected(
@@ -321,8 +321,7 @@ async def test_validator_handle_first_tick(event_loop, event_bus, monkeypatch):
 @pytest.mark.asyncio
 async def test_validator_handle_second_tick(event_loop, event_bus, monkeypatch):
     alice, bob = await get_linked_validators(event_loop=event_loop, event_bus=event_bus)
-    state_machine = alice.chain.get_state_machine()
-    state = state_machine.state
+    state = alice.chain.get_head_state()
 
     # test: `handle_second_tick` should call `attest`
     # and skip_block` if `state.slot` is behind latest slot
@@ -350,7 +349,7 @@ async def test_validator_get_committee_assigment(event_loop, event_bus):
     alice_indices = [7]
     alice = await get_validator(event_loop=event_loop, event_bus=event_bus, indices=alice_indices)
     state_machine = alice.chain.get_state_machine()
-    state = state_machine.state
+    state = alice.chain.get_head_state()
     epoch = slot_to_epoch(state.slot, state_machine.config.SLOTS_PER_EPOCH)
 
     assert alice.this_epoch_assignment[alice_indices[0]][0] == -1
@@ -364,7 +363,7 @@ async def test_validator_attest(event_loop, event_bus, monkeypatch):
     alice = await get_validator(event_loop=event_loop, event_bus=event_bus, indices=alice_indices)
     head = alice.chain.get_canonical_head()
     state_machine = alice.chain.get_state_machine()
-    state = state_machine.state
+    state = alice.chain.get_head_state()
 
     epoch = slot_to_epoch(state.slot, state_machine.config.SLOTS_PER_EPOCH)
     assignment = alice._get_this_epoch_assignment(alice_indices[0], epoch)
@@ -399,7 +398,7 @@ async def test_validator_include_ready_attestations(event_loop, event_bus, monke
     alice_indices = list(range(8))
     alice = await get_validator(event_loop=event_loop, event_bus=event_bus, indices=alice_indices)
     state_machine = alice.chain.get_state_machine()
-    state = state_machine.state
+    state = alice.chain.get_head_state()
 
     attesting_slot = state.slot + 1
     attestations = await alice.attest(attesting_slot)
