@@ -46,7 +46,7 @@ from eth2.beacon.signature_domain import (
 )
 from eth2.beacon.helpers import (
     get_domain,
-    slot_to_epoch,
+    compute_epoch_of_slot,
 )
 from eth2.beacon.types.attestations import Attestation, IndexedAttestation
 from eth2.beacon.types.attestation_data import AttestationData
@@ -228,8 +228,8 @@ def validate_proposer_slashing(state: BeaconState,
 
 def validate_proposer_slashing_epoch(proposer_slashing: ProposerSlashing,
                                      slots_per_epoch: int) -> None:
-    epoch_1 = slot_to_epoch(proposer_slashing.header_1.slot, slots_per_epoch)
-    epoch_2 = slot_to_epoch(proposer_slashing.header_2.slot, slots_per_epoch)
+    epoch_1 = compute_epoch_of_slot(proposer_slashing.header_1.slot, slots_per_epoch)
+    epoch_2 = compute_epoch_of_slot(proposer_slashing.header_2.slot, slots_per_epoch)
 
     if epoch_1 != epoch_2:
         raise ValidationError(
@@ -270,7 +270,7 @@ def validate_block_header_signature(state: BeaconState,
             state,
             SignatureDomain.DOMAIN_BEACON_PROPOSER,
             slots_per_epoch,
-            slot_to_epoch(header.slot, slots_per_epoch),
+            compute_epoch_of_slot(header.slot, slots_per_epoch),
         )
     )
     if not header_signature_is_valid:
