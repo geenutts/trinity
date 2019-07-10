@@ -27,10 +27,6 @@ from .defaults import (
 )
 
 
-def _round_down_to_previous_multiple(amount: int, increment: int) -> int:
-    return amount - amount % increment
-
-
 class Validator(ssz.Serializable):
 
     fields = [
@@ -97,15 +93,6 @@ class Validator(ssz.Serializable):
         return cls(
             pubkey=pubkey,
             withdrawal_credentials=withdrawal_credentials,
-            effective_balance=Gwei(
-                min(
-                    _round_down_to_previous_multiple(
-                        amount,
-                        config.EFFECTIVE_BALANCE_INCREMENT,
-                    ),
-                    config.MAX_EFFECTIVE_BALANCE,
-                )
-            ),
             activation_eligibility_epoch=FAR_FUTURE_EPOCH,
             activation_epoch=FAR_FUTURE_EPOCH,
             exit_epoch=FAR_FUTURE_EPOCH,
