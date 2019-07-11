@@ -14,6 +14,7 @@ from ssz.sedes import (
 
 from eth2.beacon.constants import (
     SECONDS_PER_DAY,
+    DEPOSIT_CONTRACT_TREE_DEPTH,
 )
 from eth2.beacon.deposit_helpers import (
     process_deposit,
@@ -57,7 +58,7 @@ def state_with_validator_digests(state: BeaconState, config: Eth2Config) -> Beac
     )
     active_index_root = ssz.hash_tree_root(
         active_validator_indices,
-        List(ssz.uint64),
+        List(ssz.uint64, config.VALIDATOR_REGISTRY_LIMIT),
     )
     active_index_roots = (
         (active_index_root,) * config.EPOCHS_PER_HISTORICAL_VECTOR
@@ -80,15 +81,19 @@ def round_down_to_previous_multiple(amount: int, increment: int) -> int:
     return amount - amount % increment
 
 
+def _genesis_time_from_eth1_timestamp(eth1_timestamp: Timestamp) -> Timestamp:
+    return Timestamp(
+        eth1_timestamp - eth1_timestamp % SECONDS_PER_DAY + 2 * SECONDS_PER_DAY,
+    )
+
+
 def initialize_beacon_state_from_eth1(*,
                                       eth1_block_hash: Hash32,
                                       eth1_timestamp: Timestamp,
                                       deposits: Sequence[Deposit],
                                       config: Eth2Config) -> BeaconState:
     state = BeaconState(
-        genesis_time=Timestamp(
-            eth1_timestamp - eth1_timestamp % SECONDS_PER_DAY + 2 * SECONDS_PER_DAY,
-        ),
+        genesis_time=_genesis_time_from_eth1_timestamp(eth1_timestamp),
         eth1_data=Eth1Data(
             block_hash=eth1_block_hash,
             deposit_count=len(deposits),
@@ -107,7 +112,10 @@ def initialize_beacon_state_from_eth1(*,
         )
         state = state.copy(
             eth1_data=state.eth1_data.copy(
-                deposit_root=ssz.hash_tree_root(deposit_data_list, List(DepositData)),
+                deposit_root=ssz.hash_tree_root(
+                    deposit_data_list,
+                    List(DepositData, 2**DEPOSIT_CONTRACT_TREE_DEPTH),
+                ),
             ),
         )
         state = process_deposit(
