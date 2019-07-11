@@ -39,12 +39,14 @@ from eth2.beacon.types.states import BeaconState
 from eth2.beacon.typing import (
     Gwei,
     Timestamp,
+    ValidatorIndex,
 )
 from eth2.beacon.validator_status_helpers import (
     activate_validator,
 )
 from eth2.configs import (
     Eth2Config,
+    CommitteeConfig,
 )
 
 
@@ -63,7 +65,7 @@ def state_with_validator_digests(state: BeaconState, config: Eth2Config) -> Beac
     committee_root = get_compact_committees_root(
         state,
         config.GENESIS_EPOCH,
-        config,
+        CommitteeConfig(config),
     )
     compact_committee_roots = (
         (committee_root,) * config.EPOCHS_PER_HISTORICAL_VECTOR
@@ -84,7 +86,9 @@ def initialize_beacon_state_from_eth1(*,
                                       deposits: Sequence[Deposit],
                                       config: Eth2Config) -> BeaconState:
     state = BeaconState(
-        genesis_time=eth1_timestamp - eth1_timestamp % SECONDS_PER_DAY + 2 * SECONDS_PER_DAY,
+        genesis_time=Timestamp(
+            eth1_timestamp - eth1_timestamp % SECONDS_PER_DAY + 2 * SECONDS_PER_DAY,
+        ),
         eth1_data=Eth1Data(
             block_hash=eth1_block_hash,
             deposit_count=len(deposits),
@@ -114,6 +118,7 @@ def initialize_beacon_state_from_eth1(*,
 
     # Process genesis activations
     for validator_index in range(len(state.validators)):
+        validator_index = ValidatorIndex(validator_index)
         balance = state.balances[validator_index]
         effective_balance = Gwei(
             min(
