@@ -20,7 +20,6 @@ from ssz.tools import (
     from_formatted_dict,
 )
 
-
 from eth2.configs import (
     Eth2Config,
 )
@@ -35,8 +34,10 @@ from eth2.beacon.typing import (
 from eth2.beacon.state_machines.forks.serenity.configs import (
     SERENITY_CONFIG,
 )
-from eth2._utils.bls import bls
-
+from eth2.beacon.tools.fixtures.loading import (
+    BaseStateTestCase,
+    TestFile,
+)
 
 # Test files
 ROOT_PROJECT_DIR = Path(__file__).cwd()
@@ -55,21 +56,31 @@ FIXTURE_FILE_NAMES = [
 
 # test_format
 @dataclass
-class TestCase:
-    line_number: int
-    bls_setting: bool
-    description: str
-    pre: BeaconState
-    post: BeaconState
+class SanityTestCase(BaseStateTestCase):
     slots: Optional[Sequence[Slot]] = None
     blocks: Optional[Sequence[BeaconBlock]] = None
 
 
-@dataclass
-class TestFile:
-    file_name: str
-    config: Eth2Config
-    test_cases: Sequence[TestCase]
+# Mock bls verification for these tests
+#
+def mock_bls_verify(message_hash, pubkey, signature, domain):
+    return True
+
+
+def mock_bls_verify_multiple(pubkeys,
+                             message_hashes,
+                             signature,
+                             domain):
+    return True
+
+
+@pytest.fixture(autouse=True)
+def mock_bls(mocker, request):
+    if 'noautofixture' in request.keywords:
+        return
+
+    mocker.patch('py_ecc.bls.verify', side_effect=mock_bls_verify)
+    mocker.patch('py_ecc.bls.verify_multiple', side_effect=mock_bls_verify_multiple)
 
 
 #
@@ -118,7 +129,7 @@ def parse_test_case(test_case, config):
         blocks = None
 
     slots = test_case['slots'] if 'slots' in test_case else None
-    return TestCase(
+    return SanityTestCase(
         line_number=test_case.lc.line,
         bls_setting=bls_setting,
         description=description,
