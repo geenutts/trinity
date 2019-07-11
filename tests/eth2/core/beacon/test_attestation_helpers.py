@@ -18,7 +18,7 @@ from eth2.beacon.helpers import (
 from eth2.beacon.signature_domain import SignatureDomain
 from eth2.beacon.attestation_helpers import (
     is_slashable_attestation_data,
-    validate_indexed_attestation,
+    is_valid_indexed_attestation,
     verify_indexed_attestation_aggregate_signature,
 )
 from eth2.beacon.types.attestation_data import AttestationData
@@ -96,7 +96,7 @@ def _run_verify_indexed_vote(slots_per_epoch,
                              should_succeed):
     votes = IndexedAttestation(**params)
     if should_succeed:
-        validate_indexed_attestation(
+        is_valid_indexed_attestation(
             state,
             votes,
             max_validators_per_committee,
@@ -104,7 +104,7 @@ def _run_verify_indexed_vote(slots_per_epoch,
         )
     else:
         with pytest.raises(ValidationError):
-            validate_indexed_attestation(
+            is_valid_indexed_attestation(
                 state,
                 votes,
                 max_validators_per_committee,
@@ -201,7 +201,7 @@ def _create_indexed_attestation_messages(params):
         (_corrupt_signature, False, True, False),
     ],
 )
-def test_validate_indexed_attestation(slots_per_epoch,
+def test_is_valid_indexed_attestation(slots_per_epoch,
                                       validator_count,
                                       genesis_state,
                                       param_mapper,
