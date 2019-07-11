@@ -93,9 +93,11 @@ class Validator(ssz.Serializable):
         return cls(
             pubkey=pubkey,
             withdrawal_credentials=withdrawal_credentials,
-            effective_balance=min(
-                amount - amount % config.EFFECTIVE_BALANCE_INCREMENT,
-                config.MAX_EFFECTIVE_BALANCE,
+            effective_balance=Gwei(
+                min(
+                    amount - amount % config.EFFECTIVE_BALANCE_INCREMENT,
+                    config.MAX_EFFECTIVE_BALANCE,
+                )
             ),
             activation_eligibility_epoch=FAR_FUTURE_EPOCH,
             activation_epoch=FAR_FUTURE_EPOCH,
