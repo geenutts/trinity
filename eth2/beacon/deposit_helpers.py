@@ -35,7 +35,7 @@ def validate_deposit_proof(state: BeaconState,
     Validate if deposit branch proof is valid.
     """
     is_valid_proof = verify_merkle_branch(
-        leaf=deposit.data.root,
+        leaf=deposit.data.hash_tree_root,
         proof=deposit.proof,
         depth=deposit_contract_tree_depth + 1,
         index=state.eth1_deposit_index,
@@ -44,7 +44,7 @@ def validate_deposit_proof(state: BeaconState,
     if not is_valid_proof:
         raise ValidationError(
             f"deposit.proof ({list(map(encode_hex, deposit.proof))}) is invalid against "
-            f"leaf={encode_hex(deposit.data.root)}, "
+            f"leaf={encode_hex(deposit.data.hash_tree_root)}, "
             f"deposit_contract_tree_depth={deposit_contract_tree_depth}, "
             f"deposit.index (via state) = {state.eth1_deposit_index} "
             f"state.eth1_data.deposit_root={state.eth1_data.deposit_root.hex()}"

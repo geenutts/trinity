@@ -170,11 +170,11 @@ def _create_indexed_attestation_messages(params):
         AttestationDataAndCustodyBit(
             data=data,
             custody_bit=False,
-        ).root,
+        ).hash_tree_root,
         AttestationDataAndCustodyBit(
             data=data,
             custody_bit=True,
-        ).root,
+        ).hash_tree_root,
     )
 
 
