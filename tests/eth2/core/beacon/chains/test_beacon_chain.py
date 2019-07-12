@@ -25,7 +25,6 @@ from eth2.beacon.tools.builder.proposer import (
 )
 from eth2.beacon.tools.builder.validator import (
     create_mock_signed_attestations_at_slot,
-    sign_transaction,
 )
 from eth2.beacon.state_machines.forks.serenity.blocks import (
     SerenityBeaconBlock,
@@ -256,7 +255,6 @@ def test_get_attestation_root(valid_chain,
     with pytest.raises(AttestationRootNotFound):
         valid_chain.get_attestation_by_root(fake_attestation.root)
     assert not valid_chain.attestation_exists(fake_attestation.root)
-
 
 
 @pytest.mark.long
