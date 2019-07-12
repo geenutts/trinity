@@ -103,15 +103,6 @@ class BeaconStateMachine(BaseBeaconStateMachine):
         else:
             self.slot = slot
 
-    # @property
-    # def state(self) -> BeaconState:
-    #     if self._state is None:
-    #         self._state = self.chaindb.get_state_by_slot(
-    #             self.slot,
-    #             self.get_state_class()
-    #         )
-    #     return self._state
-
     @classmethod
     def get_block_class(cls) -> Type[BaseBeaconBlock]:
         """

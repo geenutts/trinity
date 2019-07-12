@@ -4,7 +4,6 @@ from abc import (
 )
 import logging
 from typing import (
-    Dict,
     TYPE_CHECKING,
     Tuple,
     Type,
@@ -196,8 +195,6 @@ class BeaconChain(BaseBeaconChain):
 
     chaindb_class = BeaconChainDB  # type: Type[BaseBeaconChainDB]
 
-    state_cache: Dict[Hash32, BeaconState] = {}  # state_root -> BeaconState
-
     def __init__(self,
                  base_db: BaseAtomicDB,
                  attestation_pool: AttestationPool,
@@ -328,8 +325,6 @@ class BeaconChain(BaseBeaconChain):
         sm_class = self.get_state_machine_class_for_block_slot(slot)
         state_class = sm_class.get_state_class()
         state_root = self.chaindb.get_state_root_by_slot(slot)
-        if state_root in self.state_cache:
-            return self.state_cache[state_root]
         try:
             state = self.chaindb.get_state_by_root(state_root, state_class)
             return state
@@ -338,16 +333,7 @@ class BeaconChain(BaseBeaconChain):
 
     def rebuild_state(self) -> BeaconState:
         # TODO
-        head_slot = self.get_canonical_head().slot
-        config = self.get_config_by_slot(head_slot)
-        latest_epoch_boundary_state_slot = max(
-            config.GENESIS_SLOT,
-            head_slot - (config.SLOTS_PER_EPOCH * (head_slot // config.GENESIS_SLOT)),
-        )
-        return self.get_state_by_slot(latest_epoch_boundary_state_slot)
-
-    def update_state_cache(self, state: BeaconState, state_root: Hash32) -> None:
-        self.state_cache[state_root] = state
+        pass
 
     #
     # Block API
@@ -467,11 +453,8 @@ class BeaconChain(BaseBeaconChain):
         if perform_validation:
             validate_imported_block_unchanged(imported_block, block)
 
-        config = self.get_state_machine_class_for_block_slot(block.slot).config
-        is_epoch_boundary = True if (state.slot + 1) % config.SLOTS_PER_EPOCH == 0 else False
-        is_epoch_boundary = True
-        self.chaindb.persist_state(state, is_epoch_boundary=is_epoch_boundary)
-        self.update_state_cache(state, state.root)
+        # TODO: Now it just persists all state. Should design how to clean up the old state.
+        self.chaindb.persist_state(state, is_epoch_boundary=True)
 
         fork_choice_scoring = state_machine.get_fork_choice_scoring()
         (

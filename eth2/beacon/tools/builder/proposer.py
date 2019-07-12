@@ -14,9 +14,6 @@ from eth2.configs import (
     CommitteeConfig,
     Eth2Config,
 )
-from eth2.beacon.chains.base import (
-    BeaconChain,
-)
 from eth2.beacon.signature_domain import (
     SignatureDomain,
 )
@@ -87,32 +84,6 @@ def validate_proposer_index(state: BeaconState,
 
     if validator_index != beacon_proposer_index:
         raise ProposerIndexError
-
-
-def create_block_on_chain(chain: BeaconChain,
-                          slot: Slot,
-                          proposer_index: ValidatorIndex,
-                          proposer_privkey: int,
-                          attestations: Sequence[Attestation]) -> BaseBeaconBlock:
-    state = chain.get_head_state()
-    state_machine = chain.get_state_machine()
-    config = state_machine.config
-    block_class = state_machine.block_class
-    parent_block = chain.get_canonical_head()
-
-    block = create_block_on_state(
-        state=state,
-        config=config,
-        state_machine=state_machine,
-        block_class=block_class,
-        parent_block=parent_block,
-        slot=slot,
-        validator_index=proposer_index,
-        privkey=proposer_privkey,
-        attestations=attestations,
-        check_proposer_index=False,
-    )
-    return block
 
 
 def create_block_on_state(
