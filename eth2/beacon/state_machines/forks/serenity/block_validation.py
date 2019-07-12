@@ -175,7 +175,7 @@ def validate_randao_reveal(state: BeaconState,
                            slots_per_epoch: int) -> None:
     proposer = state.validators[proposer_index]
     proposer_pubkey = proposer.pubkey
-    message_hash = ssz.hash_tree_root(epoch, sedes=ssz.sedes.uint64)
+    message_hash = ssz.get_hash_tree_root(epoch, sedes=ssz.sedes.uint64)
     domain = get_domain(state, SignatureDomain.DOMAIN_RANDAO, slots_per_epoch)
 
     is_randao_reveal_valid = bls.verify(
