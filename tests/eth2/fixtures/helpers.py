@@ -8,6 +8,9 @@ from eth2.beacon.tools.fixtures.loading import (
 )
 
 
+#
+# pytest setting
+#
 def bls_setting_mark_fn(bls_setting):
     if bls_setting is True:
         return pytest.mark.noautofixture
