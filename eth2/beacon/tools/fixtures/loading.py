@@ -19,6 +19,7 @@ class BaseStateTestCase:
     description: str
     pre: BeaconState
     post: BeaconState
+    is_valid: bool = True
 
 
 @dataclass
