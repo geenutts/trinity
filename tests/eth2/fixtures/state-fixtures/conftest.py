@@ -1,6 +1,7 @@
 import pytest
 from py_ecc import bls  # noqa: F401
 
+
 from eth2.beacon.tools.fixtures.bls_mock import (
     mock_bls_verify,
     mock_bls_verify_multiple,
