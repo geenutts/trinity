@@ -38,7 +38,7 @@ def generate_config_by_dict(dict_config: Dict[str, Any]):
 
 def get_config(root_project_dir, config_name):
     # TODO: change the path after the constants presets are copied to submodule
-    path = root_project_dir / 'tests/eth2/fixtures-tests'
+    path = root_project_dir / 'tests/eth2/fixtures'
     yaml = YAML()
     file_name = config_name + '.yaml'
     file_to_open = path / file_name
