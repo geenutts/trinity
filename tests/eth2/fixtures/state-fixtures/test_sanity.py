@@ -39,7 +39,7 @@ from eth2.beacon.typing import (
 from eth2.beacon.tools.fixtures.test_case import (
     BaseStateTestCase,
 )
-from tests.eth2.fixtures-tests.helpers import (
+from tests.eth2.fixtures.helpers import (
     get_test_cases,
 )
 
