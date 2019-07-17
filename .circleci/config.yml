@@ -164,7 +164,7 @@ eth2_fixtures: &eth2_fixtures
           - curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh | sudo bash
           - sudo apt-get install -y git-lfs
           - ssh git@github.com git-lfs-authenticate hwwhww/trinity.git download
-        cd eth2-fixtures && git lfs fetch -X './tests/sanity/**'
+          - cd eth2-fixtures && git lfs fetch -X './tests/sanity/**'
     - run:
         name: install dependencies
         command: pip install --user tox
