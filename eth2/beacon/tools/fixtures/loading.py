@@ -13,6 +13,7 @@ from eth_utils import (
 )
 from ruamel.yaml import (
     YAML,
+    YAMLError,
 )
 
 from eth2.beacon.helpers import (
@@ -51,7 +52,10 @@ def get_config(root_project_dir: Path, config_name: str) -> Eth2Config:
     file_to_open = path / file_name
     with open(file_to_open, 'U') as f:
         new_text = f.read()
-        data = yaml.load(new_text)
+        try:
+            data = yaml.load(new_text)
+        except YAMLError as exc:
+            print(exc)
     return generate_config_by_dict(data)
 
 
@@ -84,7 +88,10 @@ def get_files_of_dir(root_project_dir: Path,
             file_to_open = path / file_name
             with open(file_to_open, 'U') as f:
                 new_text = f.read()
-                data = yaml.load(new_text)
+                try:
+                    data = yaml.load(new_text)
+                except YAMLError as exc:
+                    print(exc)
                 test_file = get_test_file_from_dict(
                     data,
                     root_project_dir,
