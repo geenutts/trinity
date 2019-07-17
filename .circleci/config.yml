@@ -163,7 +163,7 @@ eth2_fixtures: &eth2_fixtures
         command: sudo apt-get install -y git-lfs
     - run:
         name: download the required yaml files
-        command: cd eth2-fixtures && git config lfs.fetchinclude './tests/sanity/**' && git lfs pull
+        command: cd eth2-fixtures && git lfs fetch -X './tests/sanity/**'
     - run:
         name: install dependencies
         command: pip install --user tox
