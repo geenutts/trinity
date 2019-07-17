@@ -56,6 +56,7 @@ def get_config(root_project_dir: Path, config_name: str) -> Eth2Config:
             data = yaml.load(new_text)
         except YAMLError as exc:
             print(exc)
+            raise
     return generate_config_by_dict(data)
 
 
@@ -63,6 +64,7 @@ def get_test_file_from_dict(data: Dict[str, Any],
                             root_project_dir: Path,
                             file_name: str,
                             parse_test_case_fn: Callable[..., Any]) -> TestFile:
+    print(f'data={data}')
     config_name = data['config']
     config = get_config(root_project_dir, config_name)
     parsed_test_cases = tuple(
@@ -92,6 +94,7 @@ def get_files_of_dir(root_project_dir: Path,
                     data = yaml.load(new_text)
                 except YAMLError as exc:
                     print(exc)
+                    raise
                 test_file = get_test_file_from_dict(
                     data,
                     root_project_dir,
