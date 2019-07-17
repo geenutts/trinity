@@ -390,7 +390,9 @@ def config(shard_count,
         MAX_VOLUNTARY_EXITS=max_voluntary_exits,
         MAX_TRANSFERS=max_transfers,
         DEPOSIT_CONTRACT_ADDRESS=deposit_contract_address,
-        EARLY_DERIVED_SECRET_PENALTY_MAX_FUTURE_EPOCHS=early_derived_secret_penalty_max_future_epochs,
+        EARLY_DERIVED_SECRET_PENALTY_MAX_FUTURE_EPOCHS=(
+            early_derived_secret_penalty_max_future_epochs
+        ),
     )
 
 
