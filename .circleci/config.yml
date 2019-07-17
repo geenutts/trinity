@@ -160,11 +160,11 @@ eth2_fixtures: &eth2_fixtures
         command: sudo apt install -y gcc g++ cmake
     - run:
         name: download the required yaml files
-        command:
-          - curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh | sudo bash
-          - sudo apt-get install -y git-lfs
-          - ssh git@github.com git-lfs-authenticate hwwhww/trinity.git download
-          - cd eth2-fixtures && git lfs fetch -X './tests/sanity/**'
+        command: |
+          curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh | sudo bash
+          sudo apt-get install -y git-lfs
+          ssh git@github.com git-lfs-authenticate hwwhww/trinity.git download
+          cd eth2-fixtures && git lfs fetch -X './tests/sanity/**'
     - run:
         name: install dependencies
         command: pip install --user tox
