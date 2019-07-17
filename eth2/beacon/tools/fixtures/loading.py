@@ -64,6 +64,7 @@ def get_test_file_from_dict(data: Dict[str, Any],
                             root_project_dir: Path,
                             file_name: str,
                             parse_test_case_fn: Callable[..., Any]) -> TestFile:
+    print(f'data={data}')
     config_name = data['config']
     config = get_config(root_project_dir, config_name)
     parsed_test_cases = tuple(
