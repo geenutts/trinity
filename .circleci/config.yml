@@ -163,6 +163,7 @@ eth2_fixtures: &eth2_fixtures
         command: |
           curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh | sudo bash
           sudo apt-get install -y git-lfs
+          sudo mkdir -p ~/.ssh
           ssh-keyscan -H github.com >> ~/.ssh/known_hosts
           ssh git@github.com git-lfs-authenticate hwwhww/trinity.git download
           cd eth2-fixtures && git lfs fetch --all
