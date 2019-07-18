@@ -163,6 +163,7 @@ eth2_fixtures: &eth2_fixtures
         command: |
           curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh | sudo bash
           sudo apt-get install -y git-lfs
+          ssh-keyscan -H github.com >> ~/.ssh/known_hosts
           ssh git@github.com git-lfs-authenticate ethereum/eth2.0-spec-tests.git download
           cd eth2-fixtures && git lfs fetch -X './tests/sanity/**'
     - run:
