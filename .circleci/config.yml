@@ -165,7 +165,7 @@ eth2_fixtures: &eth2_fixtures
           sudo apt-get install -y git-lfs
           ssh-keyscan -H github.com >> ~/.ssh/known_hosts
           ssh git@github.com git-lfs-authenticate hwwhww/trinity.git download
-          cd eth2-fixtures && git lfs fetch -X './tests/sanity/**'
+          cd eth2-fixtures && git lfs fetch --all
     - run:
         name: install dependencies
         command: pip install --user tox
