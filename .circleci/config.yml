@@ -162,11 +162,8 @@ eth2_fixtures: &eth2_fixtures
         name: download the required yaml files
         command: |
           sudo apt-get update
-          sudo apt-get install -y git-lfs openssh-client
+          sudo apt-get install -y git-lfs
           git lfs install
-          mkdir -p ~/.ssh
-          ssh-keyscan -H github.com >> ~/.ssh/known_hosts
-          ssh git@github.com git-lfs-authenticate "ethereum/trinity" download
           cd eth2-fixtures && git lfs pull
     - run:
         name: install dependencies
