@@ -164,7 +164,7 @@ eth2_fixtures: &eth2_fixtures
           sudo apt-get update
           sudo apt-get install -y git-lfs
           git lfs install
-          cd eth2-fixtures && git lfs pull
+          git lfs clone https://github.com/ethereum/eth2.0-spec-tests.git eth2-fixtures-2
     - run:
         name: install dependencies
         command: pip install --user tox
