@@ -148,9 +148,13 @@ def get_bls_setting(test_case: Dict[str, Any]) -> bool:
 def get_states(
     test_case: Dict[str, Any], cls_state: Type[BeaconState]
 ) -> Tuple[BeaconState, BeaconState, bool]:
-    pre = from_formatted_dict(test_case["pre"], cls_state)
+    pre = cls_state.from_ssz_object(
+        from_formatted_dict(test_case["pre"], cls_state.ssz_class)
+    )
     if test_case["post"] is not None:
-        post = from_formatted_dict(test_case["post"], cls_state)
+        post = cls_state.from_ssz_object(
+            from_formatted_dict(test_case["post"], cls_state.ssz_class)
+        )
         is_valid = True
     else:
         post = None

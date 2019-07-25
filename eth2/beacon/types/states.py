@@ -1,8 +1,7 @@
 import copy
 from dataclasses import asdict, astuple, dataclass
-from typing import Any, Callable, Dict, Sequence, Tuple
+from typing import Any, Callable, Dict, Sequence, Tuple  # noqa: F401
 
-from eth.constants import ZERO_HASH32
 from eth_typing import Hash32
 from eth_utils import encode_hex
 import ssz
@@ -220,7 +219,7 @@ class BeaconState:
     current_justified_checkpoint: Checkpoint = default_checkpoint
     finalized_checkpoint: Checkpoint = default_checkpoint
 
-    config: Eth2Config = None
+    config = None  # type: Eth2Config
 
     def __init__(
         self,
@@ -320,6 +319,9 @@ class BeaconState:
 
         self.config = config
 
+        # Clean cache
+        self.field_hash_tree_root_cache = {}
+
     def __repr__(self) -> str:
         return f"<BeaconState #{self.slot} {encode_hex(self.hash_tree_root)[2:10]}>"
 
@@ -352,19 +354,25 @@ class BeaconState:
     def ssz_object(self) -> SSZBeaconState:
         return self.ssz_class(**asdict(self))
 
-    field_hash_tree_root_cache: Dict[Any, Hash32] = {}
+    field_hash_tree_root_cache = {}  # type: Dict[Any, Hash32]
 
     @property
     def hash_tree_root(self) -> Hash32:
         merkle_leaves: Tuple[Hash32, ...] = ()
-        for element, sedes in zip(
-            astuple(self), self.ssz_class._meta.container_sedes.field_sedes
+        index = 0
+        for element, sedes, field_name in zip(
+            astuple(self),
+            self.ssz_class._meta.container_sedes.field_sedes,
+            self.ssz_class._meta.field_names,
         ):
-            if element in self.field_hash_tree_root_cache:
-                field_hash_tree_root = self.field_hash_tree_root_cache[element]
+            key = str(element) + field_name
+            if index == 0:
+                index += 1
+            if key in self.field_hash_tree_root_cache:
+                field_hash_tree_root = self.field_hash_tree_root_cache[key]
             else:
                 field_hash_tree_root = sedes.get_hash_tree_root(element)
-                self.field_hash_tree_root_cache[element] = field_hash_tree_root
+                self.field_hash_tree_root_cache[key] = field_hash_tree_root
             merkle_leaves += (field_hash_tree_root,)
 
         return merkleize(merkle_leaves)

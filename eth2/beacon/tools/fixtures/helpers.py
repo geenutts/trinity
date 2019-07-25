@@ -66,10 +66,16 @@ def apply_blocks(
     return post_state, chaindb
 
 
-def validate_state(test_case_state: BeaconState, post_state: BeaconState) -> None:
+def verify_state(
+    test_case: StateTestCase,
+    post_state: BeaconState,
+    cls_state: Type[BeaconState] = BeaconState,
+) -> None:
     # Use dict diff, easier to see the diff
-    dict_post_state = to_formatted_dict(post_state, BeaconState)
-    dict_expected_state = to_formatted_dict(test_case_state, BeaconState)
+    dict_post_state = to_formatted_dict(post_state.ssz_object, cls_state.ssz_class)
+    dict_expected_state = to_formatted_dict(
+        test_case.post.ssz_object, cls_state.ssz_class
+    )
     for key, value in dict_expected_state.items():
         if isinstance(value, list):
             value = tuple(value)
