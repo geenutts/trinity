@@ -1,6 +1,7 @@
 import copy
 from dataclasses import asdict, astuple, dataclass
-from typing import Any, Callable, Dict, Sequence, Tuple  # noqa: F401
+from dataclasses import fields as dataclasses_fields
+from typing import Any, Callable, Dict, Sequence, Tuple  # noqa: F401; noqa: F401
 
 from eth_typing import Hash32
 from eth_utils import encode_hex
@@ -359,15 +360,12 @@ class BeaconState:
     @property
     def hash_tree_root(self) -> Hash32:
         merkle_leaves: Tuple[Hash32, ...] = ()
-        index = 0
         for element, sedes, field_name in zip(
-            astuple(self),
+            tuple(getattr(self, f.name) for f in dataclasses_fields(self)),
             self.ssz_class._meta.container_sedes.field_sedes,
             self.ssz_class._meta.field_names,
         ):
-            key = str(element) + field_name
-            if index == 0:
-                index += 1
+            key = field_name + str(element)
             if key in self.field_hash_tree_root_cache:
                 field_hash_tree_root = self.field_hash_tree_root_cache[key]
             else:
