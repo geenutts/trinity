@@ -1,10 +1,17 @@
+import copy
 from typing import Any, Callable, Sequence
+
+from dataclasses import asdict, astuple, dataclass, fields
+
+from eth_typing import Hash32
+from eth_utils import encode_hex
 
 from eth.constants import ZERO_HASH32
 from eth_typing import Hash32
 from eth_utils import encode_hex
 import ssz
 from ssz.sedes import Bitvector, List, Vector, bytes32, uint64
+from ssz.utils import merkleize
 
 from eth2._utils.tuple import update_tuple_item, update_tuple_item_with_fn
 from eth2.beacon.constants import JUSTIFICATION_BITS_LENGTH
@@ -38,7 +45,7 @@ from .validators import Validator
 default_justification_bits = Bitfield((False,) * JUSTIFICATION_BITS_LENGTH)
 
 
-class BeaconState(ssz.Serializable):
+class SSZBeaconState(ssz.Serializable):
 
     fields = [
         # Versioning
@@ -89,7 +96,7 @@ class BeaconState(ssz.Serializable):
 
     def __init__(
         self,
-        *,
+        # *,
         genesis_time: Timestamp = default_timestamp,
         slot: Slot = default_slot,
         fork: Fork = default_fork,
@@ -187,6 +194,179 @@ class BeaconState(ssz.Serializable):
 
     def __repr__(self) -> str:
         return f"<BeaconState #{self.slot} {encode_hex(self.hash_tree_root)[2:10]}>"
+
+
+@dataclass
+class BeaconState():
+    genesis_time: Timestamp=default_timestamp
+    slot: Slot=default_slot
+    fork: Fork=default_fork
+    latest_block_header: BeaconBlockHeader=default_beacon_block_header
+    block_roots: Sequence[Hash32]=default_tuple
+    state_roots: Sequence[Hash32]=default_tuple
+    historical_roots: Sequence[Hash32]=default_tuple
+    eth1_data: Eth1Data=default_eth1_data
+    eth1_data_votes: Sequence[Eth1Data]=default_tuple
+    eth1_deposit_index: int=0
+    validators: Sequence[Validator]=default_tuple
+    balances: Sequence[Gwei]=default_tuple
+    start_shard: Shard=default_shard
+    randao_mixes: Sequence[Hash32]=default_tuple
+    active_index_roots: Sequence[Hash32]=default_tuple
+    compact_committees_roots: Sequence[Hash32]=default_tuple
+    slashings: Sequence[Gwei]=default_tuple
+    previous_epoch_attestations: Sequence[PendingAttestation]=default_tuple
+    current_epoch_attestations: Sequence[PendingAttestation]=default_tuple
+    previous_crosslinks: Sequence[Crosslink]=default_tuple
+    current_crosslinks: Sequence[Crosslink]=default_tuple
+    justification_bits: Bitfield=default_justification_bits
+    previous_justified_checkpoint: Checkpoint=default_checkpoint
+    current_justified_checkpoint: Checkpoint=default_checkpoint
+    finalized_checkpoint: Checkpoint=default_checkpoint
+
+    config = None
+
+    def __init__(
+            self,
+            *,
+            genesis_time: Timestamp=default_timestamp,
+            slot: Slot=default_slot,
+            fork: Fork=default_fork,
+            latest_block_header: BeaconBlockHeader=default_beacon_block_header,
+            block_roots: Sequence[Hash32]=default_tuple,
+            state_roots: Sequence[Hash32]=default_tuple,
+            historical_roots: Sequence[Hash32]=default_tuple,
+            eth1_data: Eth1Data=default_eth1_data,
+            eth1_data_votes: Sequence[Eth1Data]=default_tuple,
+            eth1_deposit_index: int=0,
+            validators: Sequence[Validator]=default_tuple,
+            balances: Sequence[Gwei]=default_tuple,
+            start_shard: Shard=default_shard,
+            randao_mixes: Sequence[Hash32]=default_tuple,
+            active_index_roots: Sequence[Hash32]=default_tuple,
+            compact_committees_roots: Sequence[Hash32]=default_tuple,
+            slashings: Sequence[Gwei]=default_tuple,
+            previous_epoch_attestations: Sequence[PendingAttestation]=default_tuple,
+            current_epoch_attestations: Sequence[PendingAttestation]=default_tuple,
+            previous_crosslinks: Sequence[Crosslink]=default_tuple,
+            current_crosslinks: Sequence[Crosslink]=default_tuple,
+            justification_bits: Bitfield=default_justification_bits,
+            previous_justified_checkpoint: Checkpoint=default_checkpoint,
+            current_justified_checkpoint: Checkpoint=default_checkpoint,
+            finalized_checkpoint: Checkpoint=default_checkpoint,
+            config: Eth2Config=None) -> None:
+        if len(validators) != len(balances):
+            raise ValueError(
+                "The length of validators and balances lists should be the same."
+            )
+
+        if config:
+            # try to provide sane defaults
+            if block_roots == default_tuple:
+                block_roots = default_tuple_of_size(config.SLOTS_PER_HISTORICAL_ROOT, ZERO_HASH32)
+            if state_roots == default_tuple:
+                state_roots = default_tuple_of_size(config.SLOTS_PER_HISTORICAL_ROOT, ZERO_HASH32)
+            if randao_mixes == default_tuple:
+                randao_mixes = default_tuple_of_size(
+                    config.EPOCHS_PER_HISTORICAL_VECTOR,
+                    ZERO_HASH32
+                )
+            if active_index_roots == default_tuple:
+                active_index_roots = default_tuple_of_size(
+                    config.EPOCHS_PER_HISTORICAL_VECTOR,
+                    ZERO_HASH32
+                )
+            if compact_committees_roots == default_tuple:
+                compact_committees_roots = default_tuple_of_size(
+                    config.EPOCHS_PER_HISTORICAL_VECTOR,
+                    ZERO_HASH32
+                )
+            if slashings == default_tuple:
+                slashings = default_tuple_of_size(
+                    config.EPOCHS_PER_SLASHINGS_VECTOR,
+                    Gwei(0),
+                )
+            if previous_crosslinks == default_tuple:
+                previous_crosslinks = default_tuple_of_size(
+                    config.SHARD_COUNT,
+                    default_crosslink,
+                )
+            if current_crosslinks == default_tuple:
+                current_crosslinks = default_tuple_of_size(
+                    config.SHARD_COUNT,
+                    default_crosslink,
+                )
+
+        self.genesis_time = genesis_time
+        self.slot = slot
+        self.fork = fork
+        self.latest_block_header = latest_block_header
+        self.block_roots = block_roots
+        self.state_roots = state_roots
+        self.historical_roots = historical_roots
+        self.eth1_data = eth1_data
+        self.eth1_data_votes = eth1_data_votes
+        self.eth1_deposit_index = eth1_deposit_index
+        self.validators = validators
+        self.balances = balances
+        self.start_shard = start_shard
+        self.randao_mixes = randao_mixes
+        self.active_index_roots = active_index_roots
+        self.compact_committees_roots = compact_committees_roots
+        self.slashings = slashings
+        self.previous_epoch_attestations = previous_epoch_attestations
+        self.current_epoch_attestations = current_epoch_attestations
+        self.previous_crosslinks = previous_crosslinks
+        self.current_crosslinks = current_crosslinks
+        self.justification_bits = justification_bits
+        self.previous_justified_checkpoint = previous_justified_checkpoint
+        self.current_justified_checkpoint = current_justified_checkpoint
+        self.finalized_checkpoint = finalized_checkpoint
+
+        self.config = config
+
+    def __repr__(self) -> str:
+        return f"<BeaconState #{self.slot} {encode_hex(self.hash_tree_root)[2:10]}>"
+
+    def copy(self, *args, **kwargs):
+        copied_state = copy.deepcopy(self)
+        for field_name, value in kwargs.items():
+            setattr(copied_state, field_name, value)
+
+        if len(copied_state.validators) != len(copied_state.balances):
+            raise ValueError(
+                "The length of validators and balances lists should be the same."
+            )
+
+        return copied_state
+
+    ssz_class = SSZBeaconState
+
+    @classmethod
+    def from_ssz_object(cls, ssz_object):
+        return cls(
+            **({
+                name: getattr(ssz_object, name)
+                for name in ssz_object._meta.field_names
+            })
+        )
+
+    @property
+    def ssz_object(self):
+        return self.ssz_class(**asdict(self))
+
+    @property
+    def hash_tree_root(self):
+        # TODO: optimize it
+        merkle_leaves = tuple(
+            sedes.get_hash_tree_root(element)
+            for element, sedes in zip(
+                astuple(self),
+                self.ssz_class._meta.container_sedes.field_sedes,
+            )
+        )
+        return merkleize(merkle_leaves)
+
 
     @property
     def validator_count(self) -> int:
