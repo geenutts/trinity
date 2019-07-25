@@ -4,6 +4,13 @@ import ssz
 from eth2.beacon.tools.builder.initializer import create_mock_validator
 from eth2.beacon.types.states import BeaconState
 
+<<<<<<< HEAD
+
+=======
+
+
+>>>>>>> Impure functions!!!!!
+
 
 def test_defaults(sample_beacon_state_params):
     state = BeaconState(**sample_beacon_state_params)

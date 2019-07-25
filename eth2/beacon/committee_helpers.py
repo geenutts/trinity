@@ -78,7 +78,7 @@ def get_start_shard(state: BeaconState, epoch: Epoch, config: CommitteeConfig) -
             + config.SHARD_COUNT
             - get_shard_delta(state, Epoch(check_epoch), config)
         ) % config.SHARD_COUNT
-    return shard
+    return Shard(shard)
 
 
 def _find_proposer_in_committee(

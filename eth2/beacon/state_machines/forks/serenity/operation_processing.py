@@ -2,9 +2,9 @@ from typing import Tuple
 
 from eth_utils import ValidationError
 
+from eth2 import impure
 from eth2.beacon.attestation_helpers import get_attestation_data_slot
 from eth2.beacon.committee_helpers import get_beacon_proposer_index
-from eth2.beacon.deposit_helpers import process_deposit
 from eth2.beacon.epoch_processing_helpers import decrease_balance, increase_balance
 from eth2.beacon.types.blocks import BaseBeaconBlock
 from eth2.beacon.types.pending_attestations import PendingAttestation
@@ -88,6 +88,7 @@ def process_attester_slashings(
     return state
 
 
+@impure
 def process_attestations(
     state: BeaconState, block: BaseBeaconBlock, config: Eth2Config
 ) -> BeaconState:
@@ -118,14 +119,13 @@ def process_attestations(
         else:
             new_previous_epoch_attestations += (pending_attestation,)
 
-    return state.copy(
-        current_epoch_attestations=(
-            state.current_epoch_attestations + new_current_epoch_attestations
-        ),
-        previous_epoch_attestations=(
-            state.previous_epoch_attestations + new_previous_epoch_attestations
-        ),
+    state.current_epoch_attestations = (
+        state.current_epoch_attestations + new_current_epoch_attestations
     )
+    state.previous_epoch_attestations = (
+        state.previous_epoch_attestations + new_previous_epoch_attestations
+    )
+    return state
 
 
 def process_deposits(

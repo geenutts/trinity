@@ -9,6 +9,7 @@ from eth2.beacon.state_machines.forks.serenity import SerenityStateMachine
 from eth2.beacon.tools.builder.proposer import advance_to_slot
 from eth2.beacon.tools.fixtures.test_case import StateTestCase
 from eth2.beacon.types.states import BeaconState
+from eth2.beacon.typing import Slot
 
 
 def run_state_execution(
@@ -38,7 +39,7 @@ def apply_advance_to_slot(
 ) -> Tuple[BeaconState, BeaconChainDB]:
     post_state = state.copy()
     sm = sm_class(chaindb, attestation_pool, None, post_state)
-    slot = test_case.pre.slot + test_case.slots
+    slot = Slot(test_case.pre.slot + test_case.slots)
     chaindb.persist_state(post_state)
     return advance_to_slot(sm, post_state, slot), chaindb
 

@@ -1,8 +1,7 @@
+from eth2 import impure
 from eth2._utils.hash import hash_eth2
 from eth2._utils.numeric import bitwise_xor
 from eth2._utils.tuple import update_tuple_item
-from eth2.beacon.committee_helpers import get_beacon_proposer_index
-from eth2.beacon.helpers import get_randao_mix
 from eth2.beacon.state_machines.forks.serenity.block_validation import (
     validate_randao_reveal,
 )
@@ -20,6 +19,7 @@ from .block_validation import (
 from .operation_processing import process_operations
 
 
+@impure
 def process_block_header(
     state: BeaconState,
     block: BaseBeaconBlock,
@@ -35,15 +35,15 @@ def process_block_header(
             state, block, committee_config=CommitteeConfig(config)
         )
 
-    return state.copy(
-        latest_block_header=BeaconBlockHeader(
-            slot=block.slot,
-            parent_root=block.parent_root,
-            body_root=block.body.hash_tree_root,
-        )
+    state.latest_block_header = BeaconBlockHeader(
+        slot=block.slot,
+        parent_root=block.parent_root,
+        body_root=block.body.hash_tree_root,
     )
+    return state
 
 
+@impure
 def process_randao(
     state: BeaconState, block: BaseBeaconBlock, config: Eth2Config
 ) -> BeaconState:
@@ -71,13 +71,13 @@ def process_randao(
         hash_eth2(block.body.randao_reveal),
     )
 
-    return state.copy(
-        randao_mixes=update_tuple_item(
-            state.randao_mixes, randao_mix_index, new_randao_mix
-        )
+    state.randao_mixes = update_tuple_item(
+        state.randao_mixes, randao_mix_index, new_randao_mix
     )
+    return state
 
 
+@impure
 def process_eth1_data(
     state: BeaconState, block: BaseBeaconBlock, config: Eth2Config
 ) -> BeaconState:
@@ -92,7 +92,9 @@ def process_eth1_data(
     ):
         new_eth1_data = body.eth1_data
 
-    return state.copy(eth1_data=new_eth1_data, eth1_data_votes=new_eth1_data_votes)
+    state.eth1_data = new_eth1_data
+    state.eth1_data_votes = new_eth1_data_votes
+    return state
 
 
 def process_block(

@@ -694,7 +694,9 @@ class BeaconChainDB(BaseBeaconChainDB):
         return self._persist_state(state)
 
     def _persist_state(self, state: BeaconState) -> None:
-        self.db.set(state.hash_tree_root, ssz.encode(state.ssz_object, sedes=state.ssz_class))
+        self.db.set(
+            state.hash_tree_root, ssz.encode(state.ssz_object, sedes=state.ssz_class)
+        )
         self._add_slot_to_state_root_lookup(state.slot, state.hash_tree_root)
 
         self._persist_finalized_head(state)
