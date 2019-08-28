@@ -1,8 +1,8 @@
 import copy
 from dataclasses import asdict, astuple, dataclass
 from dataclasses import fields as dataclasses_fields
-from typing import Any, Callable, Dict, Sequence, Tuple  # noqa: F401; noqa: F401
 
+from eth.constants import ZERO_HASH32
 from eth_typing import Hash32
 from eth_utils import encode_hex
 import ssz
@@ -37,6 +37,9 @@ from .eth1_data import Eth1Data, default_eth1_data
 from .forks import Fork, default_fork
 from .pending_attestations import PendingAttestation
 from .validators import Validator
+
+from typing import Any, Callable, Dict, Sequence, Tuple  # noqa: F401; noqa: F401
+
 
 default_justification_bits = Bitfield((False,) * JUSTIFICATION_BITS_LENGTH)
 

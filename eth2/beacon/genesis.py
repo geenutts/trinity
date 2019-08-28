@@ -48,6 +48,9 @@ def state_with_validator_digests(state: BeaconState, config: Eth2Config) -> Beac
     committee_root = get_compact_committees_root(
         state, config.GENESIS_EPOCH, CommitteeConfig(config)
     )
+    compact_committees_roots = (
+        (committee_root,) * config.EPOCHS_PER_HISTORICAL_VECTOR
+    )
     state.active_index_roots = active_index_roots
     state.compact_committees_roots = compact_committees_roots
     return state

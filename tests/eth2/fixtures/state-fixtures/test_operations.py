@@ -11,7 +11,7 @@ from eth2.beacon.state_machines.forks.serenity.operation_processing import (
     process_voluntary_exits,
 )
 from eth2.beacon.tools.fixtures.config_name import ONLY_MINIMAL
-from eth2.beacon.tools.fixtures.helpers import validate_state
+from eth2.beacon.tools.fixtures.helpers import verify_state
 from eth2.beacon.tools.fixtures.loading import (
     get_bls_setting,
     get_operation_or_header,
@@ -97,7 +97,7 @@ def test_operation_fixture(config, test_case):
 
     if test_case.is_valid:
         post_state = operation_processing(post_state, block, config)
-        validate_state(test_case.post, post_state)
+        verify_state(test_case, post_state, post_state.__class__)
     else:
         with pytest.raises((ValidationError, IndexError, SignatureError)):
             operation_processing(post_state, block, config)

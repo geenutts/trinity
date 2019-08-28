@@ -8,7 +8,7 @@ from ssz.tools import from_formatted_dict
 
 from eth2.beacon.genesis import initialize_beacon_state_from_eth1
 from eth2.beacon.tools.fixtures.config_name import ONLY_MINIMAL
-from eth2.beacon.tools.fixtures.helpers import validate_state
+from eth2.beacon.tools.fixtures.helpers import verify_state
 from eth2.beacon.tools.fixtures.loading import get_bls_setting, get_deposits
 from eth2.beacon.tools.fixtures.test_case import BaseTestCase
 from eth2.beacon.tools.misc.ssz_vector import override_lengths
@@ -78,4 +78,4 @@ def test_genesis_initialization_fixture(config, test_case):
         config=config,
     )
 
-    validate_state(test_case.state, result_state)
+    verify_state(test_case, result_state, result_state.__class__)

@@ -5,6 +5,7 @@ from eth_utils import ValidationError
 from eth2 import impure
 from eth2.beacon.attestation_helpers import get_attestation_data_slot
 from eth2.beacon.committee_helpers import get_beacon_proposer_index
+from eth2.beacon.deposit_helpers import process_deposit
 from eth2.beacon.epoch_processing_helpers import decrease_balance, increase_balance
 from eth2.beacon.types.blocks import BaseBeaconBlock
 from eth2.beacon.types.pending_attestations import PendingAttestation

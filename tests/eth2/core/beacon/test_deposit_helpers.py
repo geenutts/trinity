@@ -48,17 +48,11 @@ def test_process_deposit(
         state, pubkey, keymap, withdrawal_credentials, config
     )
 
-<<<<<<< HEAD
-    validator_count_before_deposit = state.validator_count
-
-    result_state = process_deposit(state=state, deposit=deposit, config=config)
-=======
     result_state = process_deposit(
         state=state.copy(),
         deposit=deposit,
         config=config,
     )
->>>>>>> Impure functions!!!!!
 
     validator = result_state.validators[validator_index]
     if is_new_validator:

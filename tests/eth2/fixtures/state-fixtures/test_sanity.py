@@ -4,7 +4,7 @@ from eth_utils import ValidationError
 import pytest
 
 from eth2.beacon.tools.fixtures.config_name import ONLY_MINIMAL
-from eth2.beacon.tools.fixtures.helpers import run_state_execution, validate_state
+from eth2.beacon.tools.fixtures.helpers import run_state_execution, verify_state
 from eth2.beacon.tools.fixtures.loading import (
     get_blocks,
     get_bls_setting,
@@ -79,7 +79,7 @@ def test_sanity_fixture(base_db, config, test_case, empty_attestation_pool):
             test_case, sm_class, chaindb, empty_attestation_pool, post_state
         )
 
-        validate_state(test_case.post, post_state)
+        verify_state(test_case, post_state, post_state.__class__)
     else:
         with pytest.raises(ValidationError):
             run_state_execution(
