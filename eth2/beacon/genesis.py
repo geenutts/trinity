@@ -89,7 +89,6 @@ def initialize_beacon_state_from_eth1(
             )
         )
         state = process_deposit(state=state, deposit=deposit, config=config)
-        state = process_deposit(state=state, deposit=deposit, config=config)
 
     # Process genesis activations
     for validator_index in range(len(state.validators)):
