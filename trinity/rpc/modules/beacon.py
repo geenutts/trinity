@@ -23,6 +23,10 @@ from trinity.plugins.eth2.metrics.events import (
 )
 
 
+def root_to_int(root):
+    return int.from_bytes(root[24:32], byteorder='little', signed=True)
+
+
 class Beacon(BaseRPCModule):
     logger = logging.getLogger("rpc.module.beacon")
 
@@ -58,7 +62,7 @@ class Beacon(BaseRPCModule):
             HeadRootRequest(),
             TO_BEACON_NETWORKING_BROADCAST_CONFIG,
         )
-        return encode_hex(res.root)
+        return str(root_to_int(res.root))
 
     async def previousJustifiedEpoch(self) -> str:
         res = await self.event_bus.request(
@@ -72,7 +76,7 @@ class Beacon(BaseRPCModule):
             PreviousJustifizedRootRequest(),
             TO_BEACON_NETWORKING_BROADCAST_CONFIG,
         )
-        return encode_hex(res.root)
+        return str(root_to_int(res.root))
 
     async def currentJustifiedEpoch(self) -> str:
         res = await self.event_bus.request(
@@ -86,7 +90,7 @@ class Beacon(BaseRPCModule):
             CurrentJustifiedRootRequest(),
             TO_BEACON_NETWORKING_BROADCAST_CONFIG,
         )
-        return encode_hex(res.root)
+        return str(root_to_int(res.root))
 
     async def finalizedEpoch(self) -> str:
         res = await self.event_bus.request(
@@ -100,4 +104,4 @@ class Beacon(BaseRPCModule):
             FinalizedRootRequest(),
             TO_BEACON_NETWORKING_BROADCAST_CONFIG,
         )
-        return encode_hex(res.root)
+        return str(root_to_int(res.root))

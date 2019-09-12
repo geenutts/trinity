@@ -20,45 +20,94 @@ from trinity.rpc.main import (
     RPCServer,
 )
 
+from .prometheus import metrics_handler
+
+
+class JsonParsingException(Exception):
+    ...
+
+
+class JsonRpcCallException(Exception):
+    ...
+
+
+async def load_json_request(request: web.Request) -> Any:
+    logger = logging.getLogger('trinity.rpc.http')
+    try:
+        body_json = await request.json()
+    except Exception as e:
+        raise JsonParsingException(f"Invalid request: {request}")
+    else:
+        return body_json
+
+async def execute_json_rpc(execute_rpc, json_request):
+    try:
+        result = await execute_rpc(json_request)
+    except Exception as e:
+        msg = f"Unrecognized exception while executing RPC: {e}"
+        raise JsonRpcCallException(msg)
+    else:
+        return result
+
+
+import prometheus_client
+from prometheus_client import Counter, Gauge, REGISTRY, CollectorRegistry
+
+from prometheus_client.core import GaugeMetricFamily
+
+
+class AllMetrics:
+    def __init__(self):
+        self.registry = CollectorRegistry()
+        self.total_requests = Counter('request_count', 'Total webapp request count', registry=self.registry)
+        self.beacon_head_slot = Gauge('beacon_head_slot', 'Slot of the head block of the beacon chain', registry=self.registry)
+        self.beacon_head_root = Gauge('beacon_head_root', 'Root of the head block of the beacon chain', registry=self.registry)
+
+all_metrics = AllMetrics()
 
 @curry
 async def handler(execute_rpc: Callable[[Any], Any], request: web.Request) -> web.Response:
     logger = logging.getLogger('trinity.rpc.http')
-
     if request.method == 'POST':
-        logger.debug(f'Receiving request: {request}')
+        logger.debug(f'Receiving POST request: {request}')
         try:
-            body_json = await request.json()
-            logger.debug(f'data: {body_json}')
-        except Exception as e:
-            # invalid json request, keep reading data until a valid json is formed
-            msg = f"Invalid request: {request}"
-            logger.debug(msg)
-            return response_error(msg)
+            body_json = await load_json_request(request)
+        except JsonParsingException as e:
+            return response_error(e)
 
         try:
-            result = await execute_rpc(body_json)
-        except Exception as e:
-            msg = "Unrecognized exception while executing RPC"
-            logger.exception(msg)
-            return response_error(msg)
+            result = await execute_json_rpc(execute_rpc, body_json)
+        except JsonRpcCallException as e:
+            return response_error(e)
         else:
-            logger.debug(f'writing: {result.encode()}')
             return web.Response(content_type='application/json', text=result)
+    elif request.method == 'GET':
+        logger.debug(f'Receiving GET request: {request.path}')
+        status, response = await metrics_handler(request, all_metrics, execute_rpc)
+        if status <= 0:
+            return response
+
+        all_metrics.total_requests.inc()
+        return web.json_response({
+            'status': 'ok'
+        })
     else:
         return response_error("Request method should be POST")
 
 
 def response_error(message: Any) -> web.Response:
-    data = {'error': message}
+    data = {'error': str(message)}
     return web.json_response(data)
 
+async def hello(request):
+    return web.Response(text="Hello, world")
 
 class HTTPServer(BaseService):
     rpc = None
     server = None
     host = None
     port = None
+    app = None
 
     def __init__(
             self,
@@ -71,13 +120,22 @@ class HTTPServer(BaseService):
         self.rpc = rpc
         self.host = host
         self.port = port
+        # Low-Level Server to handle the event loop by ourselves
         self.server = web.Server(handler(self.rpc.execute))
+
+
+        # self.app = web.Application()
+        # self.app.add_routes([web.get('/', hello)])
+
+
 
     async def _run(self) -> None:
         runner = web.ServerRunner(self.server)
         await runner.setup()
         site = web.TCPSite(runner, self.host, self.port)
         await site.start()
+
+        # web.run_app(self.app, host=self.host, port=self.port)
 
         await self.cancel_token.wait()
 
