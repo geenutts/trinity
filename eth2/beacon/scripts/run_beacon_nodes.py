@@ -246,6 +246,7 @@ async def main():
     )
 
     asyncio.ensure_future(node_alice.run())
+    await asyncio.sleep(20)
     asyncio.ensure_future(node_bob.run())
 
     await asyncio.sleep(1000000)
