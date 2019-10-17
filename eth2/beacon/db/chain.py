@@ -138,7 +138,7 @@ class BaseBeaconChainDB(ABC):
         pass
 
     @abstractmethod
-    def persist_state(self, state: BeaconState) -> None:
+    def persist_state(self, state: BeaconState, is_epoch_boundary: bool = True) -> None:
         pass
 
     #
@@ -718,16 +718,20 @@ class BeaconChainDB(BaseBeaconChainDB):
             raise StateNotFound(f"No state with root {encode_hex(state_root)} found")
         return _decode_state(state_ssz, state_class)
 
-    def persist_state(self, state: BeaconState) -> None:
+    def persist_state(self, state: BeaconState, is_epoch_boundary: bool = True) -> None:
         """
         Persist the given BeaconState.
 
         This includes the finality data contained in the BeaconState.
         """
-        return self._persist_state(state)
+        return self._persist_state(state, is_epoch_boundary)
 
-    def _persist_state(self, state: BeaconState) -> None:
-        self.db.set(state.hash_tree_root, ssz.encode(state))
+    def _persist_state(
+        self, state: BeaconState, is_epoch_boundary: bool = True
+    ) -> None:
+        if is_epoch_boundary:
+            self.db.set(state.hash_tree_root, ssz.encode(state))
+
         self._add_slot_to_state_root_lookup(state.slot, state.hash_tree_root)
 
         self._persist_finalized_head(state)

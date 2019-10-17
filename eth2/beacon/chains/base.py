@@ -11,6 +11,7 @@ from eth_utils import ValidationError, humanize_hash
 from eth2._utils.funcs import constantly
 from eth2._utils.ssz import validate_imported_block_unchanged
 from eth2.beacon.db.chain import BaseBeaconChainDB, BeaconChainDB
+from eth2.beacon.db.exceptions import StateSlotNotFound
 from eth2.beacon.exceptions import BlockClassError, StateMachineNotFound
 from eth2.beacon.operations.attestation_pool import AttestationPool
 from eth2.beacon.types.attestations import Attestation
@@ -306,7 +307,16 @@ class BeaconChain(BaseBeaconChain):
         sm_class = self.get_state_machine_class_for_block_slot(slot)
         state_class = sm_class.get_state_class()
         state_root = self.chaindb.get_state_root_by_slot(slot)
+        try:
+            state = self.chaindb.get_state_by_root(state_root, state_class)
+            return state
+        except StateSlotNotFound:
+            return self.rebuild_state()
         return self.chaindb.get_state_by_root(state_root, state_class)
+
+    def rebuild_state(self) -> BeaconState:
+        # TODO
+        pass
 
     #
     # Block API
