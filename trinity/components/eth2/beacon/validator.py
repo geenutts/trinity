@@ -76,6 +76,7 @@ from trinity.components.eth2.beacon.slot_ticker import (
 )
 from trinity.components.eth2.misc.tick_type import TickType
 from trinity.protocol.bcc_libp2p.node import Node
+from trinity.protocol.bcc_libp2p.configs import ATTESTATION_SUBNET_COUNT
 
 
 GetReadyAttestationsFn = Callable[[Slot], Sequence[Attestation]]
@@ -357,7 +358,7 @@ class Validator(BaseService):
             sorted_attesting_validators,
             key=itemgetter(1),
         )
-        for _, group in attesting_validators_groups:
+        for committee_index, group in attesting_validators_groups:
             # Get the validator_index -> privkey map of the attesting validators
             attesting_validator_privkeys = {
                 attesting_data[0]: self.validator_privkeys[attesting_data[0]]
@@ -393,7 +394,9 @@ class Validator(BaseService):
                 self.latest_attested_epoch[validator_index] = epoch
 
             self.logger.debug("broadcasting attestation %s", attestation)
-            await self.p2p_node.broadcast_attestation(attestation)
+            # await self.p2p_node.broadcast_attestation(attestation)
+            subnet_id = committee_index % ATTESTATION_SUBNET_COUNT
+            await self.p2p_node.broadcast_attestation_to_subnet(attestation, subnet_id)
 
             attestations = attestations + (attestation,)
         # TODO: Aggregate attestations

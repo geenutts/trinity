@@ -36,6 +36,12 @@ HashTreeRoot = NewType("HashTreeRoot", Hash32)
 # Merkle tree root with signature field excluded
 SigningRoot = NewType("SigningRoot", Hash32)
 
+
+#
+#  Networkinig
+#
+
+# CommitteeIndex % ATTESTATION_SUBNET_COUNT
 SubnetId = NewType("SubnetId", int)
 
 

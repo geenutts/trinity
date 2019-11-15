@@ -61,6 +61,9 @@ class FakeNode:
     async def broadcast_attestation(self, attestation):
         pass
 
+    async def broadcast_attestation_to_subnet(self, attestation, subnet_id):
+        pass
+
 
 async def get_validator(event_loop, event_bus, indices) -> Validator:
     chain = BeaconChainFactory()
