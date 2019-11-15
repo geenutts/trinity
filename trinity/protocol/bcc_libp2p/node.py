@@ -34,6 +34,7 @@ from eth2.beacon.typing import (
     Slot,
     Version,
     SigningRoot,
+    SubnetId,
 )
 
 from libp2p import (
@@ -91,6 +92,7 @@ from .configs import (
     GossipsubParams,
     PUBSUB_TOPIC_BEACON_BLOCK,
     PUBSUB_TOPIC_BEACON_ATTESTATION,
+    PUBSUB_TOPIC_COMMITTEE_ATTESTATION,
     REQ_RESP_BEACON_BLOCKS_BY_RANGE,
     REQ_RESP_GOODBYE,
     REQ_RESP_STATUS,
@@ -419,6 +421,14 @@ class Node(BaseService):
 
     async def broadcast_attestation(self, attestation: Attestation) -> None:
         await self._broadcast_data(PUBSUB_TOPIC_BEACON_ATTESTATION, ssz.encode(attestation))
+
+    async def broadcast_attestation_to_subnet(
+        self, attestation: Attestation, subnet_id: SubnetId
+    ) -> None:
+        await self._broadcast_data(
+            PUBSUB_TOPIC_COMMITTEE_ATTESTATION.substitute(subnet_id=subnet_id),
+            ssz.encode(attestation)
+        )
 
     async def _broadcast_data(self, topic: str, data: bytes) -> None:
         await self.pubsub.publish(topic, data)
