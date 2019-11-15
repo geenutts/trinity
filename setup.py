@@ -78,8 +78,8 @@ deps = {
         'pytest-trio==0.5.2',
     ],
     'lint': [
-        "flake8==3.5.0",
-        "flake8-bugbear==18.8.0",
+        "flake8==3.7.8",
+        "flake8-bugbear==19.8.0",
         "mypy==0.730",
         "sqlalchemy-stubs==0.1",
     ],
