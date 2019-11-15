@@ -234,7 +234,7 @@ async def test_validator_handle_slot_tick(event_loop, event_bus, monkeypatch):
         SlotTickEvent(
             slot=1,
             elapsed_time=2,
-            tick_type=TickType.SLOT_TWO_THIRD,
+            tick_type=TickType.SLOT_ONE_THIRD,
         ),
         BroadcastConfig(internal=True),
     )

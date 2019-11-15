@@ -36,6 +36,8 @@ HashTreeRoot = NewType("HashTreeRoot", Hash32)
 # Merkle tree root with signature field excluded
 SigningRoot = NewType("SigningRoot", Hash32)
 
+SubnetId = NewType("SubnetId", int)
+
 
 class FromBlockParams(NamedTuple):
     slot: Slot = None

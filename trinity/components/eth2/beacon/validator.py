@@ -136,8 +136,10 @@ class Validator(BaseService):
             try:
                 if event.tick_type == TickType.SLOT_START:
                     await self.handle_first_tick(event.slot)
-                else:
+                elif event.tick_type == TickType.SLOT_ONE_THIRD:
                     await self.handle_second_tick(event.slot)
+                elif event.tick_type == TickType.SLOT_TWO_THIRD:
+                    await self.handle_third_tick(event.slot)
             except ValidationError as e:
                 self.logger.warn("%s", e)
                 self.logger.warn(
@@ -236,6 +238,9 @@ class Validator(BaseService):
             )
 
         await self.attest(slot)
+
+    async def handle_third_tick(self, slot: Slot) -> None:
+        pass
 
     async def propose_block(self,
                             proposer_index: ValidatorIndex,
