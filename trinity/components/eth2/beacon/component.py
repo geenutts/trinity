@@ -4,9 +4,7 @@ from argparse import (
 )
 import os
 import asyncio
-from typing import (
-    cast,
-)
+from typing import cast, Set
 
 from lahja import EndpointAPI
 
@@ -18,6 +16,7 @@ from eth_utils import decode_hex
 
 from eth2.beacon.operations.attestation_pool import AttestationPool
 from eth2.beacon.typing import (
+    SubnetId,
     ValidatorIndex,
 )
 
@@ -27,6 +26,7 @@ from trinity._utils.shutdown import (
 from trinity.config import BeaconAppConfig
 from trinity.db.manager import DBClient
 from trinity.extensibility import AsyncioIsolatedComponent
+from trinity.protocol.bcc_libp2p.configs import ATTESTATION_SUBNET_COUNT
 from trinity.protocol.bcc_libp2p.node import Node
 from trinity.protocol.bcc_libp2p.servers import BCCReceiveServer
 
@@ -107,20 +107,26 @@ class BeaconNodeComponent(AsyncioIsolatedComponent):
             attestation_pool,
             chain_config.genesis_config
         )
+        # TODO: To simplify, subsribe all subnets
+        subnets: Set[SubnetId] = set(
+            SubnetId(subnet_id) for subnet_id in range(ATTESTATION_SUBNET_COUNT)
+        )
 
         # TODO: Handle `bootstrap_nodes`.
         libp2p_node = Node(
             key_pair=key_pair,
             listen_ip="127.0.0.1",  # FIXME: Should be configurable
             listen_port=self.boot_info.args.port,
-            preferred_nodes=trinity_config.preferred_nodes,
             chain=chain,
+            preferred_nodes=trinity_config.preferred_nodes,
+            subnets=subnets,
         )
 
         receive_server = BCCReceiveServer(
             chain=chain,
             p2p_node=libp2p_node,
             topic_msg_queues=libp2p_node.pubsub.my_topics,
+            subnets=subnets,
             cancel_token=libp2p_node.cancel_token,
         )
 
