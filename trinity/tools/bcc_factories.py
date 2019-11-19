@@ -7,6 +7,7 @@ from typing import (
     Tuple,
     Type,
     Sequence,
+    Set,
 )
 
 from async_generator import asynccontextmanager
@@ -40,7 +41,7 @@ from eth2.beacon.types.blocks import (
     BaseBeaconBlock,
 )
 from eth2.beacon.state_machines.forks.serenity import SERENITY_CONFIG
-from eth2.beacon.typing import Slot
+from eth2.beacon.typing import Slot, SubnetId
 from eth2.configs import (
     Eth2GenesisConfig,
 )
@@ -48,6 +49,7 @@ from multiaddr import Multiaddr
 
 from trinity.db.beacon.chain import AsyncBeaconChainDB
 
+from trinity.protocol.bcc_libp2p.configs import ATTESTATION_SUBNET_COUNT
 from trinity.protocol.bcc_libp2p.node import Node, PeerPool, Peer
 from trinity.protocol.bcc_libp2p.servers import BCCReceiveServer
 from trinity.sync.beacon.chain import BeaconChainSyncer
@@ -84,6 +86,9 @@ class NodeFactory(factory.Factory):
     cancel_token = None
     bootstrap_nodes = None
     preferred_nodes: Tuple[Multiaddr, ...] = tuple()
+    subnets: Set[SubnetId] = set(
+        SubnetId(subnet_id) for subnet_id in range(ATTESTATION_SUBNET_COUNT)
+    )
     chain = factory.SubFactory(BeaconChainFactory)
 
     @classmethod
@@ -232,6 +237,9 @@ class ReceiveServerFactory(factory.Factory):
     chain = None
     p2p_node = factory.SubFactory(NodeFactory)
     topic_msg_queues = None
+    subnets: Set[SubnetId] = set(
+        SubnetId(subnet_id) for subnet_id in range(ATTESTATION_SUBNET_COUNT)
+    )
     cancel_token = None
 
     @classmethod

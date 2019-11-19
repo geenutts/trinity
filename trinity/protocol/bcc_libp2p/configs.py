@@ -59,7 +59,9 @@ class GossipsubParams(NamedTuple):
 PUBSUB_TOPIC_BEACON_BLOCK = "beacon_block"
 PUBSUB_TOPIC_BEACON_AGGREGATE_AND_PROOF = "beacon_aggregate_and_proof"
 PUBSUB_TOPIC_BEACON_ATTESTATION = "beacon_attestation"
-PUBSUB_TOPIC_COMMITTEE_ATTESTATION = Template("committee_index${subnet_id}_beacon_attestation")
+PUBSUB_TOPIC_COMMITTEE_BEACON_ATTESTATION = Template(
+    "committee_index${subnet_id}_beacon_attestation"
+)
 PUBSUB_TOPIC_VOLUNTARY_EXIT = "voluntary_exit"
 PUBSUB_TOPIC_PROPOSER_SLASHING = "proposer_slashing"
 PUBSUB_TOPIC_ATTESTER_SLASHING = "attester_slashing"

@@ -21,8 +21,10 @@ from eth2.beacon.typing import FromBlockParams
 from eth2.configs import Eth2GenesisConfig
 from trinity.db.beacon.chain import AsyncBeaconChainDB
 from trinity.protocol.bcc_libp2p.configs import (
+    ATTESTATION_SUBNET_COUNT,
     PUBSUB_TOPIC_BEACON_ATTESTATION,
     PUBSUB_TOPIC_BEACON_BLOCK,
+    PUBSUB_TOPIC_COMMITTEE_BEACON_ATTESTATION,
 )
 from trinity.protocol.bcc_libp2p.servers import AttestationPool, OrphanBlockPool
 from trinity.tools.async_method import wait_until_true
@@ -85,6 +87,11 @@ async def receive_server():
         PUBSUB_TOPIC_BEACON_BLOCK: asyncio.Queue(),
         PUBSUB_TOPIC_BEACON_ATTESTATION: asyncio.Queue(),
     }
+    for subnet_id in range(ATTESTATION_SUBNET_COUNT):
+        topic = (
+            PUBSUB_TOPIC_COMMITTEE_BEACON_ATTESTATION.substitute(subnet_id=subnet_id),
+        )
+        topic_msg_queues[topic] = asyncio.Queue()
     chain = await get_fake_chain()
     server = ReceiveServerFactory(chain=chain, topic_msg_queues=topic_msg_queues)
     asyncio.ensure_future(server.run())
@@ -103,6 +110,12 @@ async def receive_server_with_mock_process_orphan_blocks_period(
         PUBSUB_TOPIC_BEACON_BLOCK: asyncio.Queue(),
         PUBSUB_TOPIC_BEACON_ATTESTATION: asyncio.Queue(),
     }
+    for subnet_id in range(ATTESTATION_SUBNET_COUNT):
+        topic = (
+            PUBSUB_TOPIC_COMMITTEE_BEACON_ATTESTATION.substitute(subnet_id=subnet_id),
+        )
+        topic_msg_queues[topic] = asyncio.Queue()
+
     chain = await get_fake_chain()
     server = ReceiveServerFactory(chain=chain, topic_msg_queues=topic_msg_queues)
     asyncio.ensure_future(server.run())

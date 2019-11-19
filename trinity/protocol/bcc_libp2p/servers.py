@@ -5,6 +5,7 @@ from typing import (
     Dict,
     Iterable,
     List,
+    Optional,
     Set,
     Tuple,
     Union,
@@ -41,6 +42,7 @@ from eth2.beacon.types.blocks import (
 )
 from eth2.beacon.typing import (
     SigningRoot,
+    SubnetId,
 )
 from eth2.beacon.state_machines.forks.serenity.block_validation import (
     validate_attestation_slot,
@@ -52,6 +54,7 @@ from trinity.protocol.bcc_libp2p.node import Node
 from .configs import (
     PUBSUB_TOPIC_BEACON_BLOCK,
     PUBSUB_TOPIC_BEACON_ATTESTATION,
+    PUBSUB_TOPIC_COMMITTEE_BEACON_ATTESTATION,
 )
 
 PROCESS_ORPHAN_BLOCKS_PERIOD = 10.0
@@ -115,17 +118,20 @@ class BCCReceiveServer(BaseService):
     topic_msg_queues: Dict[str, 'asyncio.Queue[rpc_pb2.Message]']
     attestation_pool: AttestationPool
     orphan_block_pool: OrphanBlockPool
+    subnets: Set[SubnetId]
 
     def __init__(
             self,
             chain: BaseBeaconChain,
             p2p_node: Node,
             topic_msg_queues: Dict[str, 'asyncio.Queue[rpc_pb2.Message]'],
+            subnets: Optional[Set[SubnetId]] = None,
             cancel_token: CancelToken = None) -> None:
         super().__init__(cancel_token)
         self.chain = chain
-        self.topic_msg_queues = topic_msg_queues
         self.p2p_node = p2p_node
+        self.topic_msg_queues = topic_msg_queues
+        self.subnets = subnets if subnets is not None else set()
         self.attestation_pool = AttestationPool()
         self.orphan_block_pool = OrphanBlockPool()
         self.ready = asyncio.Event()
@@ -134,8 +140,12 @@ class BCCReceiveServer(BaseService):
         while not self.p2p_node.is_started:
             await self.sleep(0.5)
         self.logger.info("BCCReceiveServer up")
+
+        # Handle gossipsub messages
         self.run_daemon_task(self._handle_beacon_attestation_loop())
         self.run_daemon_task(self._handle_beacon_block_loop())
+        for subnet_id in self.subnets:
+            self.run_daemon_task(self._handle_committee_beacon_attestation_loop(subnet_id))
         self.run_daemon_task(self._process_orphan_blocks_loop())
         self.ready.set()
         await self.cancellation()
@@ -159,6 +169,14 @@ class BCCReceiveServer(BaseService):
         await self._handle_message(
             PUBSUB_TOPIC_BEACON_ATTESTATION,
             self._handle_beacon_attestations
+        )
+
+    async def _handle_committee_beacon_attestation_loop(self, subnet_id: SubnetId) -> None:
+        await self.sleep(0.5)
+        topic = PUBSUB_TOPIC_COMMITTEE_BEACON_ATTESTATION.substitute(subnet_id=str(subnet_id))
+        await self._handle_message(
+            topic,
+            self._handle_beacon_attestations,
         )
 
     async def _handle_beacon_block_loop(self) -> None:
@@ -203,6 +221,11 @@ class BCCReceiveServer(BaseService):
                         continue
                     else:
                         self._process_received_block(block)
+
+    async def _handle_committee_beacon_attestations(self, msg: rpc_pb2.Message) -> None:
+        # TODO
+        while True:
+            await self.sleep(0.5)
 
     async def _handle_beacon_attestations(self, msg: rpc_pb2.Message) -> None:
         attestation = ssz.decode(msg.data, sedes=Attestation)
