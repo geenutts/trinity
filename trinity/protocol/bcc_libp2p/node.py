@@ -122,6 +122,7 @@ from .messages import (
     BeaconBlocksByRootRequest,
 )
 from .topic_validators import (
+    get_beacon_aggregate_and_proof_validator,
     get_beacon_attestation_validator,
     get_beacon_block_validator,
 )
@@ -332,6 +333,7 @@ class Node(BaseService):
         # Global channel
         await self.pubsub.subscribe(PUBSUB_TOPIC_BEACON_BLOCK)
         await self.pubsub.subscribe(PUBSUB_TOPIC_BEACON_ATTESTATION)
+        await self.pubsub.subscribe(PUBSUB_TOPIC_BEACON_AGGREGATE_AND_PROOF)
         # Attestation subnets
         for subnet_id in self.subnets:
             topic = PUBSUB_TOPIC_COMMITTEE_BEACON_ATTESTATION.substitute(subnet_id=str(subnet_id))
@@ -360,6 +362,12 @@ class Node(BaseService):
                 get_beacon_attestation_validator(self.chain),
                 False,
             )
+
+        self.pubsub.set_topic_validator(
+            PUBSUB_TOPIC_BEACON_AGGREGATE_AND_PROOF,
+            get_beacon_aggregate_and_proof_validator(self.chain),
+            False,
+        )
 
     async def dial_peer(self, ip: str, port: int, peer_id: ID) -> None:
         """
@@ -452,8 +460,13 @@ class Node(BaseService):
             ssz.encode(attestation)
         )
 
-    async def broadcast_beacon_aggregate_and_proof(self, aggregate_and_proof: AggregateAndProof) -> None:
-        await self._broadcast_data(PUBSUB_TOPIC_BEACON_AGGREGATE_AND_PROOF, ssz.encode(aggregate_and_proof))
+    async def broadcast_beacon_aggregate_and_proof(
+        self, aggregate_and_proof: AggregateAndProof
+    ) -> None:
+        await self._broadcast_data(
+            PUBSUB_TOPIC_BEACON_AGGREGATE_AND_PROOF,
+            ssz.encode(aggregate_and_proof),
+        )
 
     async def _broadcast_data(self, topic: str, data: bytes) -> None:
         await self.pubsub.publish(topic, data)

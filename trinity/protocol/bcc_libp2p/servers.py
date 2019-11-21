@@ -33,6 +33,7 @@ from eth2.beacon.chains.base import (
     BaseBeaconChain,
 )
 from eth2.beacon.operations.attestation_pool import AttestationPool
+from eth2.beacon.types.aggregate_and_proof import AggregateAndProof
 from eth2.beacon.types.attestations import (
     Attestation,
 )
@@ -182,7 +183,6 @@ class BCCReceiveServer(BaseService):
         )
 
     async def _handle_aggregate_and_proof_loop(self) -> None:
-        await self.sleep(0.5)
         await self._handle_message(
             PUBSUB_TOPIC_BEACON_AGGREGATE_AND_PROOF,
             self._handle_beacon_aggregate_and_proof,
@@ -237,9 +237,17 @@ class BCCReceiveServer(BaseService):
             await self.sleep(0.5)
 
     async def _handle_beacon_aggregate_and_proof(self, msg: rpc_pb2.Message) -> None:
-        # TODO
-        while True:
-            await self.sleep(0.5)
+        aggregate_and_proof = ssz.decode(msg.data, sedes=AggregateAndProof)
+
+        self.logger.debug("Received aggregate_and_proof=%s", aggregate_and_proof)
+
+        # Check if aggregate_and_proof has been seen already.
+        if not self._is_attestation_new(aggregate_and_proof.aggregate):
+            return
+
+        # Add new attestation to attestation pool.
+        self.attestation_pool.add(aggregate_and_proof.aggregate)
+        self.logger.debug2(f"Adding aggregate from aggregate_and_proof={aggregate_and_proof}")
 
     async def _handle_beacon_attestations(self, msg: rpc_pb2.Message) -> None:
         attestation = ssz.decode(msg.data, sedes=Attestation)

@@ -1,6 +1,7 @@
 from typing import Sequence
 
 from eth_typing import BLSSignature
+from eth_utils import ValidationError, encode_hex
 from ssz import get_hash_tree_root, uint64
 
 from eth2._utils.bls import bls
@@ -8,6 +9,7 @@ from eth2._utils.hash import hash_eth2
 from eth2.beacon.committee_helpers import get_beacon_committee
 from eth2.beacon.helpers import compute_epoch_at_slot, get_domain
 from eth2.beacon.signature_domain import SignatureDomain
+from eth2.beacon.types.aggregate_and_proof import AggregateAndProof
 from eth2.beacon.types.attestations import Attestation
 from eth2.beacon.types.states import BeaconState
 from eth2.beacon.typing import CommitteeIndex, Slot
@@ -65,7 +67,7 @@ def get_aggregate_from_valid_committee_attestations(
     """
     Return the aggregate attestation.
 
-    The given attestations have the same `data: AttestationData` and are valid.
+    The given attestations SHOULD have the same `data: AttestationData` and are valid.
     """
     signatures = [attestation.signature for attestation in attestations]
     aggregate_signature = bls.aggregate_signatures(signatures)
@@ -80,3 +82,25 @@ def get_aggregate_from_valid_committee_attestations(
         aggregation_bits=aggregation_bits,
         signature=aggregate_signature,
     )
+
+
+def validate_aggregator_proof(
+    state: BeaconState, aggregate_and_proof: AggregateAndProof, config: CommitteeConfig
+) -> None:
+    slot = aggregate_and_proof.aggregate.data.slot
+    pubkey = state.validators[aggregate_and_proof.index]
+    domain = get_domain(
+        state,
+        SignatureDomain.DOMAIN_BEACON_ATTESTER,
+        config.SLOTS_PER_EPOCH,
+        message_epoch=compute_epoch_at_slot(slot, config.SLOTS_PER_EPOCH),
+    )
+    message_hash = get_hash_tree_root(slot, sedes=uint64)
+    if not bls.verify(message_hash, pubkey, aggregate_and_proof.proof, domain):
+        raise ValidationError(
+            "Incorrect selection proof:"
+            f" aggregate_and_proof={aggregate_and_proof}"
+            f" pubkey={encode_hex(pubkey)}"
+            f" domain={domain}"
+            f" message_hash={message_hash}"
+        )

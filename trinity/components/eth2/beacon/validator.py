@@ -38,7 +38,7 @@ from eth2.beacon.state_machines.forks.serenity.blocks import (
     SerenityBeaconBlock,
 )
 from eth2.beacon.tools.builder.aggregator import (
-    get_aggregate_attestation,
+    get_aggregate_from_valid_committee_attestations,
     is_aggregator,
     slot_signature,
 )
@@ -250,78 +250,11 @@ class Validator(BaseService):
         await self.attest(slot)
 
     async def handle_third_tick(self, slot: Slot) -> None:
-        # TODO: Add aggregator strategy
-        pass
+        await self._create_and_broadcast_aggregate_and_proof(slot)
 
-    async def _create_and_broadcast_aggregate_and_proof(self, slot: Slot) -> None:
-        # Check the aggregators selection
-        # aggregate_and_proofs: Tuple[AggregateAndProof] = ()
-        state_machine = self.chain.get_state_machine()
-        state = self.chain.get_head_state()
-        config = state_machine.config
-        epoch = compute_epoch_at_slot(slot, self.slots_per_epoch)
-        validator_assignments = {
-            validator_index: self._get_this_epoch_assignment(
-                validator_index,
-                epoch,
-            )
-            for validator_index in self.validator_privkeys
-        }
-        attesting_validators = self._get_attesting_validator_and_committee_index(
-            validator_assignments,
-            slot,
-            epoch,
-        )
-        if len(attesting_validators) == 0:
-            return
-
-        # Sort the attesting validators by committee index
-        sorted_attesting_validators = sorted(
-            attesting_validators,
-            key=itemgetter(1),
-        )
-        # Group the attesting validators by committee index
-        attesting_validators_groups = groupby(
-            sorted_attesting_validators,
-            key=itemgetter(1),
-        )
-        for committee_index, group in attesting_validators_groups:
-            # Get the validator_index -> privkey map of the attesting validators
-            attesting_validator_privkeys = {
-                attesting_data[0]: self.validator_privkeys[attesting_data[0]]
-                for attesting_data in group
-            }
-            selected_proofs: Dict[ValidatorIndex, BLSSignature] = {}
-            for validator_index, privkey in attesting_validator_privkeys.items():
-                signature = slot_signature(
-                    state, slot, privkey, CommitteeConfig(config),
-                )
-                if is_aggregator(state, slot, committee_index, signature, CommitteeConfig(config)):
-                    selected_proofs[validator_index] = signature
-
-            for validator_index, selected_proof in selected_proofs.items():
-                aggregates = self._get_aggregates(slot, committee_index)
-                for aggregate in aggregates:
-                    aggregate_and_proof = AggregateAndProof(
-                        index=validator_index,
-                        aggregate=aggregate,
-                        selection_proof=selected_proof,
-                    )
-                    # aggregate_and_proofs += aggregate_and_proof
-                    await self.p2p_node.broadcast_beacon_aggregate_and_proof(aggregate_and_proof)
-
-
-    @to_tuple
-    def _get_aggregates(self, slot: Slot, committee_index: CommitteeIndex) -> Iterable[Attestation]:
-        attestations = self.get_ready_attestations(slot, committee_index)
-        attestation_groups = groupby(
-            attestations,
-            key=lambda attestation: attestation.data,
-        )
-        for _, group in attestation_groups:
-            yield get_aggregate_attestation(tuple(group))
-
-
+    #
+    # Proposing block
+    #
     async def propose_block(self,
                             proposer_index: ValidatorIndex,
                             slot: Slot,
@@ -386,6 +319,9 @@ class Validator(BaseService):
         self.chain.chaindb.persist_state(post_state)
         return post_state
 
+    #
+    # Attesting attestation
+    #
     def _is_attesting(self,
                       validator_index: ValidatorIndex,
                       assignment: CommitteeAssignment,
@@ -481,3 +417,73 @@ class Validator(BaseService):
         # TODO: Aggregate attestations
 
         return attestations
+
+    #
+    # Aggregating attestation
+    #
+    async def _create_and_broadcast_aggregate_and_proof(self, slot: Slot) -> None:
+        # Check the aggregators selection
+        # aggregate_and_proofs: Tuple[AggregateAndProof] = ()
+        state_machine = self.chain.get_state_machine()
+        state = self.chain.get_head_state()
+        config = state_machine.config
+        epoch = compute_epoch_at_slot(slot, self.slots_per_epoch)
+        validator_assignments = {
+            validator_index: self._get_this_epoch_assignment(
+                validator_index,
+                epoch,
+            )
+            for validator_index in self.validator_privkeys
+        }
+        attesting_validators = self._get_attesting_validator_and_committee_index(
+            validator_assignments,
+            slot,
+            epoch,
+        )
+        if len(attesting_validators) == 0:
+            return
+
+        # Sort the attesting validators by committee index
+        sorted_attesting_validators = sorted(
+            attesting_validators,
+            key=itemgetter(1),
+        )
+        # Group the attesting validators by committee index
+        attesting_validators_groups = groupby(
+            sorted_attesting_validators,
+            key=itemgetter(1),
+        )
+        for committee_index, group in attesting_validators_groups:
+            # Get the validator_index -> privkey map of the attesting validators
+            attesting_validator_privkeys = {
+                attesting_data[0]: self.validator_privkeys[attesting_data[0]]
+                for attesting_data in group
+            }
+            selected_proofs: Dict[ValidatorIndex, BLSSignature] = {}
+            for validator_index, privkey in attesting_validator_privkeys.items():
+                signature = slot_signature(
+                    state, slot, privkey, CommitteeConfig(config),
+                )
+                if is_aggregator(state, slot, committee_index, signature, CommitteeConfig(config)):
+                    selected_proofs[validator_index] = signature
+
+            for validator_index, selected_proof in selected_proofs.items():
+                aggregates = self._get_aggregates(slot, committee_index)
+                for aggregate in aggregates:
+                    aggregate_and_proof = AggregateAndProof(
+                        index=validator_index,
+                        aggregate=aggregate,
+                        selection_proof=selected_proof,
+                    )
+                    self.logger.debug2(f"broadcasting aggregate_and_proof={aggregate_and_proof}")
+                    await self.p2p_node.broadcast_beacon_aggregate_and_proof(aggregate_and_proof)
+
+    @to_tuple
+    def _get_aggregates(self, slot: Slot, committee_index: CommitteeIndex) -> Iterable[Attestation]:
+        attestations = self.get_ready_attestations(slot, committee_index)
+        attestation_groups = groupby(
+            attestations,
+            key=lambda attestation: attestation.data,
+        )
+        for _, group in attestation_groups:
+            yield get_aggregate_from_valid_committee_attestations(tuple(group))
