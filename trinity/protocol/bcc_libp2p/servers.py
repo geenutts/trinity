@@ -376,24 +376,18 @@ class BCCReceiveServer(BaseService):
             else:
                 yield attestation
 
-    @to_tuple
     def get_aggregatable_attestations(
         self,
         slot: Slot,
-        committee_index: Optional[CommitteeIndex] = None
-    ) -> Iterable[Attestation]:
-        for attestation in self.attestation_pool.get_all():
-            try:
-                # Filter by committee_index
-                if committee_index is not None and committee_index != attestation.data.index:
-                    continue
-                if slot != attestation.data.slot:
-                    continue
-
-            except ValidationError:
-                continue
-            else:
-                yield attestation
+        committee_index: CommitteeIndex
+    ) -> Tuple[Attestation, ...]:
+        return tuple(
+            filter(
+                lambda attestation:
+                slot == attestation.data.slot and committee_index == attestation.data.index,
+                self.attestation_pool.get_all()
+            )
+        )
 
     def import_attestation(self, attestation: Attestation) -> None:
         self.attestation_pool.add(attestation)
