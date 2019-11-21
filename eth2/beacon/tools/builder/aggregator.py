@@ -97,16 +97,9 @@ def validate_aggregator_proof(
     )
     message_hash = get_hash_tree_root(slot, sedes=uint64)
 
-    if not bls.verify(
+    bls.validate(
         message_hash=message_hash,
         pubkey=pubkey,
         signature=aggregate_and_proof.selection_proof,
         domain=domain,
-    ):
-        raise ValidationError(
-            "Incorrect selection proof:"
-            f" aggregate_and_proof={aggregate_and_proof}"
-            f" pubkey={encode_hex(pubkey)}"
-            f" domain={domain}"
-            f" message_hash={message_hash}"
-        )
+    )
