@@ -178,7 +178,6 @@ class BCCReceiveServer(BaseService):
         )
 
     async def _handle_committee_beacon_attestation_loop(self, subnet_id: SubnetId) -> None:
-        await self.sleep(0.5)
         topic = PUBSUB_TOPIC_COMMITTEE_BEACON_ATTESTATION.substitute(subnet_id=str(subnet_id))
         await self._handle_message(
             topic,
@@ -361,8 +360,7 @@ class BCCReceiveServer(BaseService):
     @to_tuple
     def get_ready_attestations(
         self,
-        current_slot: Slot,
-        committee_index: Optional[CommitteeIndex] = None
+        current_slot: Slot
     ) -> Iterable[Attestation]:
         config = self.chain.get_state_machine().config
         for attestation in self.attestation_pool.get_all():
@@ -373,10 +371,6 @@ class BCCReceiveServer(BaseService):
                     config.SLOTS_PER_EPOCH,
                     config.MIN_ATTESTATION_INCLUSION_DELAY,
                 )
-                # Filter by committee_index
-                if committee_index is not None and committee_index != attestation.data.index:
-                    continue
-
             except ValidationError:
                 continue
             else:

@@ -73,7 +73,13 @@ async def get_validator(event_loop, event_bus, indices) -> Validator:
         for index in indices
     }
 
-    def get_ready_attestations_fn(slot, committee_index):
+    def get_ready_attestations_fn(slot):
+        return ()
+
+    def get_aggregatable_attestations_fn(slot, committee_index):
+        return ()
+
+    def import_attestation_fn(attestation):
         return ()
 
     v = Validator(
@@ -81,6 +87,8 @@ async def get_validator(event_loop, event_bus, indices) -> Validator:
         p2p_node=FakeNode(),
         validator_privkeys=validator_privkeys,
         get_ready_attestations_fn=get_ready_attestations_fn,
+        get_aggregatable_attestations_fn=get_aggregatable_attestations_fn,
+        import_attestation_fn=import_attestation_fn,
         event_bus=event_bus,
     )
     asyncio.ensure_future(v.run(), loop=event_loop)
@@ -389,7 +397,7 @@ async def test_validator_include_ready_attestations(event_loop, event_bus, monke
 
     # Mock `get_ready_attestations_fn` so it returns the attestation alice
     # attested to.
-    def get_ready_attestations_fn(slot, committee_index):
+    def get_ready_attestations_fn(slot):
         return attestations
     monkeypatch.setattr(alice, 'get_ready_attestations', get_ready_attestations_fn)
 

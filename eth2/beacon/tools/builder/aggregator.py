@@ -12,7 +12,7 @@ from eth2.beacon.signature_domain import SignatureDomain
 from eth2.beacon.types.aggregate_and_proof import AggregateAndProof
 from eth2.beacon.types.attestations import Attestation
 from eth2.beacon.types.states import BeaconState
-from eth2.beacon.typing import CommitteeIndex, Slot
+from eth2.beacon.typing import Bitfield, CommitteeIndex, Slot
 from eth2.configs import CommitteeConfig
 
 # TODO: TARGET_AGGREGATORS_PER_COMMITTEE is not in Eth2Config now.
@@ -79,7 +79,7 @@ def get_aggregate_from_valid_committee_attestations(
 
     return Attestation(
         data=attestations[0].data,
-        aggregation_bits=aggregation_bits,
+        aggregation_bits=Bitfield(aggregation_bits),
         signature=aggregate_signature,
     )
 

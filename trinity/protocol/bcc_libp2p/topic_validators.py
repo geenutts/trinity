@@ -29,7 +29,7 @@ from eth2.beacon.tools.builder.aggregator import (
     validate_aggregator_proof,
 )
 from eth2.beacon.typing import Slot
-from eth2.configs import CommitteeConfig
+from eth2.configs import CommitteeConfig, Eth2Config
 
 from libp2p.peer.id import ID
 from libp2p.pubsub.pb import rpc_pb2
@@ -146,7 +146,7 @@ def get_beacon_attestation_validator(chain: BaseBeaconChain) -> Callable[..., bo
 def validate_aggregate_and_proof(
     state: BeaconState,
     aggregate_and_proof: AggregateAndProof,
-    config: CommitteeConfig,
+    config: Eth2Config,
 ) -> None:
     """
     Validate aggregate_and_proof
@@ -169,7 +169,7 @@ def validate_aggregate_and_proof(
         state,
         aggregate_and_proof.aggregate.data,
         aggregate_and_proof.aggregate.aggregation_bits,
-        config,
+        CommitteeConfig(config),
     )
     if aggregate_and_proof.index not in attesting_indices:
         raise ValidationError(
@@ -182,13 +182,13 @@ def validate_aggregate_and_proof(
         aggregate_and_proof.aggregate.data.slot,
         aggregate_and_proof.aggregate.data.index,
         aggregate_and_proof.selection_proof,
-        config,
+        CommitteeConfig(config),
     ):
         raise ValidationError(
             f"The given validator {aggregate_and_proof.index} is not selected aggregator"
         )
 
-    validate_aggregator_proof(state, aggregate_and_proof, config)
+    validate_aggregator_proof(state, aggregate_and_proof, CommitteeConfig(config))
 
     validate_attestation(state, aggregate_and_proof.aggregate, config)
 

@@ -8,7 +8,6 @@ from typing import (
     Callable,
     Dict,
     Iterable,
-    Optional,
     Sequence,
     Tuple,
 )
@@ -88,8 +87,8 @@ from trinity.protocol.bcc_libp2p.node import Node
 from trinity.protocol.bcc_libp2p.configs import ATTESTATION_SUBNET_COUNT
 
 
-GetReadyAttestationsFn = Callable[[Slot, Optional[CommitteeIndex]], Sequence[Attestation]]
-GetAggregatableAttestationsFn = Callable[[Slot, Optional[CommitteeIndex]], Sequence[Attestation]]
+GetReadyAttestationsFn = Callable[[Slot], Sequence[Attestation]]
+GetAggregatableAttestationsFn = Callable[[Slot, CommitteeIndex], Sequence[Attestation]]
 ImportAttestationFn = Callable[[Attestation], None]
 
 
@@ -267,7 +266,7 @@ class Validator(BaseService):
                             state: BeaconState,
                             state_machine: BaseBeaconStateMachine,
                             head_block: BaseBeaconBlock) -> BaseBeaconBlock:
-        ready_attestations = self.get_ready_attestations(slot, None)
+        ready_attestations = self.get_ready_attestations(slot)
         block = self._make_proposing_block(
             proposer_index=proposer_index,
             slot=slot,
@@ -438,7 +437,6 @@ class Validator(BaseService):
     #
 
     async def create_and_broadcast_aggregate_and_proof(self, slot: Slot) -> None:
-        self.logger.error("In _create_and_broadcast_aggregate_and_proof...")
         # Check the aggregators selection
         # aggregate_and_proofs: Tuple[AggregateAndProof] = ()
         state_machine = self.chain.get_state_machine()
