@@ -88,7 +88,7 @@ def validate_aggregator_proof(
     state: BeaconState, aggregate_and_proof: AggregateAndProof, config: CommitteeConfig
 ) -> None:
     slot = aggregate_and_proof.aggregate.data.slot
-    pubkey = state.validators[aggregate_and_proof.index]
+    pubkey = state.validators[aggregate_and_proof.index].pubkey
     domain = get_domain(
         state,
         SignatureDomain.DOMAIN_BEACON_ATTESTER,
@@ -96,7 +96,13 @@ def validate_aggregator_proof(
         message_epoch=compute_epoch_at_slot(slot, config.SLOTS_PER_EPOCH),
     )
     message_hash = get_hash_tree_root(slot, sedes=uint64)
-    if not bls.verify(message_hash, pubkey, aggregate_and_proof.proof, domain):
+
+    if not bls.verify(
+        message_hash=message_hash,
+        pubkey=pubkey,
+        signature=aggregate_and_proof.selection_proof,
+        domain=domain,
+    ):
         raise ValidationError(
             "Incorrect selection proof:"
             f" aggregate_and_proof={aggregate_and_proof}"

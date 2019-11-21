@@ -153,6 +153,9 @@ class BCCReceiveServer(BaseService):
         self.ready.set()
         await self.cancellation()
 
+    #
+    # Daemon tasks
+    #
     async def _handle_message(
             self,
             topic: str,
@@ -171,7 +174,7 @@ class BCCReceiveServer(BaseService):
     async def _handle_beacon_attestation_loop(self) -> None:
         await self._handle_message(
             PUBSUB_TOPIC_BEACON_ATTESTATION,
-            self._handle_beacon_attestations
+            self._handle_beacon_attestation
         )
 
     async def _handle_committee_beacon_attestation_loop(self, subnet_id: SubnetId) -> None:
@@ -179,7 +182,7 @@ class BCCReceiveServer(BaseService):
         topic = PUBSUB_TOPIC_COMMITTEE_BEACON_ATTESTATION.substitute(subnet_id=str(subnet_id))
         await self._handle_message(
             topic,
-            self._handle_beacon_attestations,
+            self._handle_committee_beacon_attestation,
         )
 
     async def _handle_aggregate_and_proof_loop(self) -> None:
@@ -231,34 +234,25 @@ class BCCReceiveServer(BaseService):
                     else:
                         self._process_received_block(block)
 
-    async def _handle_committee_beacon_attestations(self, msg: rpc_pb2.Message) -> None:
-        # TODO
-        while True:
-            await self.sleep(0.5)
+    #
+    # Message handlers
+    #
+    async def _handle_committee_beacon_attestation(self, msg: rpc_pb2.Message) -> None:
+        await self._handle_beacon_attestation(msg)
 
     async def _handle_beacon_aggregate_and_proof(self, msg: rpc_pb2.Message) -> None:
         aggregate_and_proof = ssz.decode(msg.data, sedes=AggregateAndProof)
 
         self.logger.debug("Received aggregate_and_proof=%s", aggregate_and_proof)
 
-        # Check if aggregate_and_proof has been seen already.
-        if not self._is_attestation_new(aggregate_and_proof.aggregate):
-            return
+        self._add_attestation(aggregate_and_proof.aggregate)
 
-        # Add new attestation to attestation pool.
-        self.attestation_pool.add(aggregate_and_proof.aggregate)
-        self.logger.debug2(f"Adding aggregate from aggregate_and_proof={aggregate_and_proof}")
-
-    async def _handle_beacon_attestations(self, msg: rpc_pb2.Message) -> None:
+    async def _handle_beacon_attestation(self, msg: rpc_pb2.Message) -> None:
         attestation = ssz.decode(msg.data, sedes=Attestation)
 
         self.logger.debug("Received attestation=%s", attestation)
 
-        # Check if attestation has been seen already.
-        if not self._is_attestation_new(attestation):
-            return
-        # Add new attestation to attestation pool.
-        self.attestation_pool.add(attestation)
+        self._add_attestation(attestation)
 
     async def _handle_beacon_block(self, msg: rpc_pb2.Message) -> None:
         block = ssz.decode(msg.data, BeaconBlock)
@@ -271,6 +265,14 @@ class BCCReceiveServer(BaseService):
         if attestation.hash_tree_root in self.attestation_pool:
             return False
         return not self.chain.attestation_exists(attestation.hash_tree_root)
+
+    def _add_attestation(self, attestation: Attestation) -> None:
+        # Check if attestation has been seen already.
+        if not self._is_attestation_new(attestation):
+            return
+
+        # Add new attestation to attestation pool.
+        self.attestation_pool.add(attestation)
 
     def _process_received_block(self, block: BaseBeaconBlock) -> None:
         # If the block is an orphan, put it to the orphan pool
@@ -353,6 +355,9 @@ class BCCReceiveServer(BaseService):
     def _is_block_seen(self, block: BaseBeaconBlock) -> bool:
         return self._is_block_root_seen(block_root=block.signing_root)
 
+    #
+    # Exposed APIs for Validator
+    #
     @to_tuple
     def get_ready_attestations(
         self,
@@ -376,3 +381,25 @@ class BCCReceiveServer(BaseService):
                 continue
             else:
                 yield attestation
+
+    @to_tuple
+    def get_aggregatable_attestations(
+        self,
+        slot: Slot,
+        committee_index: Optional[CommitteeIndex] = None
+    ) -> Iterable[Attestation]:
+        for attestation in self.attestation_pool.get_all():
+            try:
+                # Filter by committee_index
+                if committee_index is not None and committee_index != attestation.data.index:
+                    continue
+                if slot != attestation.data.slot:
+                    continue
+
+            except ValidationError:
+                continue
+            else:
+                yield attestation
+
+    def import_attestation(self, attestation: Attestation) -> None:
+        self.attestation_pool.add(attestation)

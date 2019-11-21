@@ -108,10 +108,23 @@ def get_beacon_attestation_validator(chain: BaseBeaconChain) -> Callable[..., bo
 
         # Fast forward to state in future slot in order to pass
         # attestation.data.slot validity check
-        future_state = state_machine.state_transition.apply_state_transition(
-            state,
-            future_slot=Slot(attestation.data.slot + config.MIN_ATTESTATION_INCLUSION_DELAY),
+        future_slot = max(
+            Slot(attestation.data.slot + config.MIN_ATTESTATION_INCLUSION_DELAY),
+            state.slot
         )
+        try:
+            future_state = state_machine.state_transition.apply_state_transition(
+                state,
+                future_slot=future_slot,
+            )
+        except ValidationError as error:
+            logger.error(
+                bold_red("Failed to fast forward to state at slot=%d, error=%s"),
+                future_slot,
+                str(error),
+            )
+            return False
+
         try:
             validate_attestation(
                 future_state,
@@ -156,10 +169,13 @@ def validate_aggregate_and_proof(
         state,
         aggregate_and_proof.aggregate.data,
         aggregate_and_proof.aggregate.aggregation_bits,
-        config
+        config,
     )
     if aggregate_and_proof.index not in attesting_indices:
-        raise ValidationError("The aggregator index is not within the aggregate's committee")
+        raise ValidationError(
+            f"The aggregator index ({aggregate_and_proof.index}) is not within"
+            f" the aggregate's committee {attesting_indices}"
+        )
 
     if not is_aggregator(
         state,
@@ -194,7 +210,7 @@ def get_beacon_aggregate_and_proof_validator(chain: BaseBeaconChain) -> Callable
         config = state_machine.config
         state = chain.get_head_state()
 
-        attestation = aggregate_and_proof.aggregate_and_proof
+        attestation = aggregate_and_proof.aggregate
 
         # Check that beacon blocks attested to by the attestation are validated
         try:
@@ -211,10 +227,23 @@ def get_beacon_aggregate_and_proof_validator(chain: BaseBeaconChain) -> Callable
 
         # Fast forward to state in future slot in order to pass
         # attestation.data.slot validity check
-        future_state = state_machine.state_transition.apply_state_transition(
-            state,
-            future_slot=Slot(attestation.data.slot + config.MIN_ATTESTATION_INCLUSION_DELAY),
+        future_slot = max(
+            Slot(attestation.data.slot + config.MIN_ATTESTATION_INCLUSION_DELAY),
+            state.slot
         )
+        try:
+            future_state = state_machine.state_transition.apply_state_transition(
+                state,
+                future_slot=future_slot,
+            )
+        except ValidationError as error:
+            logger.error(
+                bold_red("Failed to fast forward to state at slot=%d, error=%s"),
+                future_slot,
+                str(error),
+            )
+            return False
+
         try:
             validate_aggregate_and_proof(
                 future_state,
@@ -228,8 +257,6 @@ def get_beacon_aggregate_and_proof_validator(chain: BaseBeaconChain) -> Callable
                 str(error),
             )
             return False
-
-        logger.debug2(f"aggregate_and_proof={aggregate_and_proof} passed")
 
         return True
     return beacon_aggregate_and_proof_validator

@@ -89,6 +89,8 @@ from trinity.protocol.bcc_libp2p.configs import ATTESTATION_SUBNET_COUNT
 
 
 GetReadyAttestationsFn = Callable[[Slot, Optional[CommitteeIndex]], Sequence[Attestation]]
+GetAggregatableAttestationsFn = Callable[[Slot, Optional[CommitteeIndex]], Sequence[Attestation]]
+ImportAttestationFn = Callable[[Attestation], None]
 
 
 class Validator(BaseService):
@@ -108,6 +110,8 @@ class Validator(BaseService):
             validator_privkeys: Dict[ValidatorIndex, int],
             event_bus: EndpointAPI,
             get_ready_attestations_fn: GetReadyAttestationsFn,
+            get_aggregatable_attestations_fn: GetAggregatableAttestationsFn,
+            import_attestation_fn: ImportAttestationFn,
             token: CancelToken = None) -> None:
         super().__init__(token)
         self.chain = chain
@@ -129,6 +133,8 @@ class Validator(BaseService):
                 CommitteeAssignment((), CommitteeIndex(-1), Slot(-1)),
             )
         self.get_ready_attestations: GetReadyAttestationsFn = get_ready_attestations_fn
+        self.get_aggregatable_attestations: GetAggregatableAttestationsFn = get_aggregatable_attestations_fn  # noqa: E501
+        self.import_attestation: ImportAttestationFn = import_attestation_fn
 
     async def _run(self) -> None:
         self.logger.info(
@@ -250,7 +256,7 @@ class Validator(BaseService):
         await self.attest(slot)
 
     async def handle_third_tick(self, slot: Slot) -> None:
-        await self._create_and_broadcast_aggregate_and_proof(slot)
+        await self.create_and_broadcast_aggregate_and_proof(slot)
 
     #
     # Proposing block
@@ -335,10 +341,17 @@ class Validator(BaseService):
         self,
         assignments: Dict[ValidatorIndex, CommitteeAssignment],
         slot: Slot,
-        epoch: Epoch
+        epoch: Epoch,
+        is_aggregating: bool = False
     ) -> Iterable[Tuple[ValidatorIndex, CommitteeIndex]]:
+        # TODO(hwwhww) refactor it
         for validator_index, assignment in assignments.items():
-            if self._is_attesting(validator_index, assignment, slot, epoch):
+            aggregator_condition = is_aggregating and assignment.slot == slot
+            attester_condition = (
+                not is_aggregating and
+                self._is_attesting(validator_index, assignment, slot, epoch)
+            )
+            if aggregator_condition or attester_condition:
                 yield (validator_index, assignment.committee_index)
 
     async def attest(self, slot: Slot) -> Tuple[Attestation, ...]:
@@ -408,9 +421,11 @@ class Validator(BaseService):
             for validator_index in attesting_validators_indices:
                 self.latest_attested_epoch[validator_index] = epoch
 
-            self.logger.debug("broadcasting attestation %s", attestation)
             # await self.p2p_node.broadcast_attestation(attestation)
             subnet_id = committee_index % ATTESTATION_SUBNET_COUNT
+
+            # Import attestation to pool and then broadcast it
+            self.import_attestation(attestation)
             await self.p2p_node.broadcast_attestation_to_subnet(attestation, subnet_id)
 
             attestations = attestations + (attestation,)
@@ -421,7 +436,9 @@ class Validator(BaseService):
     #
     # Aggregating attestation
     #
-    async def _create_and_broadcast_aggregate_and_proof(self, slot: Slot) -> None:
+
+    async def create_and_broadcast_aggregate_and_proof(self, slot: Slot) -> None:
+        self.logger.error("In _create_and_broadcast_aggregate_and_proof...")
         # Check the aggregators selection
         # aggregate_and_proofs: Tuple[AggregateAndProof] = ()
         state_machine = self.chain.get_state_machine()
@@ -439,6 +456,7 @@ class Validator(BaseService):
             validator_assignments,
             slot,
             epoch,
+            is_aggregating=True,
         )
         if len(attesting_validators) == 0:
             return
@@ -459,30 +477,48 @@ class Validator(BaseService):
                 attesting_data[0]: self.validator_privkeys[attesting_data[0]]
                 for attesting_data in group
             }
+
             selected_proofs: Dict[ValidatorIndex, BLSSignature] = {}
             for validator_index, privkey in attesting_validator_privkeys.items():
                 signature = slot_signature(
                     state, slot, privkey, CommitteeConfig(config),
                 )
-                if is_aggregator(state, slot, committee_index, signature, CommitteeConfig(config)):
+                is_aggregator_result = is_aggregator(
+                    state,
+                    slot,
+                    committee_index,
+                    signature,
+                    CommitteeConfig(config),
+                )
+
+                if is_aggregator_result:
+                    self.logger.debug(
+                        f"validator ({validator_index}) is aggregator of"
+                        f" committee_index={committee_index} at slot={slot}"
+                    )
                     selected_proofs[validator_index] = signature
 
             for validator_index, selected_proof in selected_proofs.items():
-                aggregates = self._get_aggregates(slot, committee_index)
+                aggregates = self._get_aggregates(slot, committee_index, config)
                 for aggregate in aggregates:
                     aggregate_and_proof = AggregateAndProof(
                         index=validator_index,
                         aggregate=aggregate,
                         selection_proof=selected_proof,
                     )
-                    self.logger.debug2(f"broadcasting aggregate_and_proof={aggregate_and_proof}")
+
+                    # Import attestation to pool and then broadcast it
+                    self.import_attestation(aggregate_and_proof.aggregate)
                     await self.p2p_node.broadcast_beacon_aggregate_and_proof(aggregate_and_proof)
 
     @to_tuple
-    def _get_aggregates(self, slot: Slot, committee_index: CommitteeIndex) -> Iterable[Attestation]:
-        attestations = self.get_ready_attestations(slot, committee_index)
+    def _get_aggregates(
+        self, slot: Slot, committee_index: CommitteeIndex, config: CommitteeConfig
+    ) -> Iterable[Attestation]:
+        # TODO: The aggregator should aggregate the late attestations?
+        aggregatable_attestations = self.get_aggregatable_attestations(slot, committee_index)
         attestation_groups = groupby(
-            attestations,
+            aggregatable_attestations,
             key=lambda attestation: attestation.data,
         )
         for _, group in attestation_groups:

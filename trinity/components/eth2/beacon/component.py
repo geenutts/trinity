@@ -147,6 +147,8 @@ class BeaconNodeComponent(AsyncioIsolatedComponent):
             event_bus=self.event_bus,
             token=libp2p_node.cancel_token,
             get_ready_attestations_fn=receive_server.get_ready_attestations,
+            get_aggregatable_attestations_fn=receive_server.get_aggregatable_attestations,
+            import_attestation_fn=receive_server.import_attestation,
         )
 
         slot_ticker = SlotTicker(
