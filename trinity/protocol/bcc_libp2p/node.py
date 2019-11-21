@@ -23,6 +23,9 @@ from eth_utils.toolz import first
 from eth2.beacon.chains.base import (
     BaseBeaconChain,
 )
+from eth2.beacon.types.aggregate_and_proof import (
+    AggregateAndProof,
+)
 from eth2.beacon.types.attestations import (
     Attestation,
 )
@@ -91,6 +94,7 @@ from .configs import (
     GOSSIPSUB_PROTOCOL_ID,
     GoodbyeReasonCode,
     GossipsubParams,
+    PUBSUB_TOPIC_BEACON_AGGREGATE_AND_PROOF,
     PUBSUB_TOPIC_BEACON_BLOCK,
     PUBSUB_TOPIC_BEACON_ATTESTATION,
     PUBSUB_TOPIC_COMMITTEE_BEACON_ATTESTATION,
@@ -447,6 +451,9 @@ class Node(BaseService):
             PUBSUB_TOPIC_COMMITTEE_BEACON_ATTESTATION.substitute(subnet_id=str(subnet_id)),
             ssz.encode(attestation)
         )
+
+    async def broadcast_beacon_aggregate_and_proof(self, aggregate_and_proof: AggregateAndProof) -> None:
+        await self._broadcast_data(PUBSUB_TOPIC_BEACON_AGGREGATE_AND_PROOF, ssz.encode(aggregate_and_proof))
 
     async def _broadcast_data(self, topic: str, data: bytes) -> None:
         await self.pubsub.publish(topic, data)

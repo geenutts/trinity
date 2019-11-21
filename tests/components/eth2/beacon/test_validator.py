@@ -73,7 +73,7 @@ async def get_validator(event_loop, event_bus, indices) -> Validator:
         for index in indices
     }
 
-    def get_ready_attestations_fn(slot):
+    def get_ready_attestations_fn(slot, committee_index):
         return ()
 
     v = Validator(
@@ -389,7 +389,7 @@ async def test_validator_include_ready_attestations(event_loop, event_bus, monke
 
     # Mock `get_ready_attestations_fn` so it returns the attestation alice
     # attested to.
-    def get_ready_attestations_fn(slot):
+    def get_ready_attestations_fn(slot, committee_index):
         return attestations
     monkeypatch.setattr(alice, 'get_ready_attestations', get_ready_attestations_fn)
 

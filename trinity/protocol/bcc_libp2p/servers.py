@@ -47,11 +47,12 @@ from eth2.beacon.typing import (
 from eth2.beacon.state_machines.forks.serenity.block_validation import (
     validate_attestation_slot,
 )
-from eth2.beacon.typing import Slot
+from eth2.beacon.typing import CommitteeIndex, Slot
 
 from trinity.protocol.bcc_libp2p.node import Node
 
 from .configs import (
+    PUBSUB_TOPIC_BEACON_AGGREGATE_AND_PROOF,
     PUBSUB_TOPIC_BEACON_BLOCK,
     PUBSUB_TOPIC_BEACON_ATTESTATION,
     PUBSUB_TOPIC_COMMITTEE_BEACON_ATTESTATION,
@@ -144,6 +145,7 @@ class BCCReceiveServer(BaseService):
         # Handle gossipsub messages
         self.run_daemon_task(self._handle_beacon_attestation_loop())
         self.run_daemon_task(self._handle_beacon_block_loop())
+        self.run_daemon_task(self._handle_aggregate_and_proof_loop())
         for subnet_id in self.subnets:
             self.run_daemon_task(self._handle_committee_beacon_attestation_loop(subnet_id))
         self.run_daemon_task(self._process_orphan_blocks_loop())
@@ -177,6 +179,13 @@ class BCCReceiveServer(BaseService):
         await self._handle_message(
             topic,
             self._handle_beacon_attestations,
+        )
+
+    async def _handle_aggregate_and_proof_loop(self) -> None:
+        await self.sleep(0.5)
+        await self._handle_message(
+            PUBSUB_TOPIC_BEACON_AGGREGATE_AND_PROOF,
+            self._handle_beacon_aggregate_and_proof,
         )
 
     async def _handle_beacon_block_loop(self) -> None:
@@ -223,6 +232,11 @@ class BCCReceiveServer(BaseService):
                         self._process_received_block(block)
 
     async def _handle_committee_beacon_attestations(self, msg: rpc_pb2.Message) -> None:
+        # TODO
+        while True:
+            await self.sleep(0.5)
+
+    async def _handle_beacon_aggregate_and_proof(self, msg: rpc_pb2.Message) -> None:
         # TODO
         while True:
             await self.sleep(0.5)
@@ -332,7 +346,11 @@ class BCCReceiveServer(BaseService):
         return self._is_block_root_seen(block_root=block.signing_root)
 
     @to_tuple
-    def get_ready_attestations(self, current_slot: Slot) -> Iterable[Attestation]:
+    def get_ready_attestations(
+        self,
+        current_slot: Slot,
+        committee_index: Optional[CommitteeIndex] = None
+    ) -> Iterable[Attestation]:
         config = self.chain.get_state_machine().config
         for attestation in self.attestation_pool.get_all():
             try:
@@ -342,6 +360,10 @@ class BCCReceiveServer(BaseService):
                     config.SLOTS_PER_EPOCH,
                     config.MIN_ATTESTATION_INCLUSION_DELAY,
                 )
+                # Filter by committee_index
+                if committee_index is not None and committee_index != attestation.data.index:
+                    continue
+
             except ValidationError:
                 continue
             else:
