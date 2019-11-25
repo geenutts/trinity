@@ -347,7 +347,7 @@ async def test_validator_get_committee_assigment(event_loop, event_bus):
     epoch = compute_epoch_at_slot(state.slot, state_machine.config.SLOTS_PER_EPOCH)
 
     assert alice.this_epoch_assignment[alice_indices[0]][0] == -1
-    alice._get_this_epoch_assignment(alice_indices[0], epoch)
+    alice._get_local_current_epoch_assignment(alice_indices[0], epoch)
     assert alice.this_epoch_assignment[alice_indices[0]][0] == epoch
 
 
@@ -360,7 +360,7 @@ async def test_validator_attest(event_loop, event_bus, monkeypatch):
     state = alice.chain.get_head_state()
 
     epoch = compute_epoch_at_slot(state.slot, state_machine.config.SLOTS_PER_EPOCH)
-    assignment = alice._get_this_epoch_assignment(alice_indices[0], epoch)
+    assignment = alice._get_local_current_epoch_assignment(alice_indices[0], epoch)
 
     attestations = await alice.attest(assignment.slot)
     assert len(attestations) == 1

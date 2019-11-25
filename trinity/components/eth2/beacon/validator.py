@@ -1,14 +1,12 @@
 from itertools import (
     groupby,
 )
-from operator import (
-    itemgetter,
-)
 from typing import (
     Callable,
     Dict,
     Iterable,
     Sequence,
+    Set,
     Tuple,
 )
 
@@ -71,6 +69,7 @@ from eth2.beacon.typing import (
     CommitteeValidatorIndex,
     Epoch,
     Slot,
+    SubnetId,
     ValidatorIndex,
 )
 from eth2.configs import CommitteeConfig
@@ -100,7 +99,7 @@ class Validator(BaseService):
     slots_per_epoch: int
     latest_proposed_epoch: Dict[ValidatorIndex, Epoch]
     latest_attested_epoch: Dict[ValidatorIndex, Epoch]
-    this_epoch_assignment: Dict[ValidatorIndex, Tuple[Epoch, CommitteeAssignment]]
+    local_validator_epoch_assignment: Dict[ValidatorIndex, Tuple[Epoch, CommitteeAssignment]]
 
     def __init__(
             self,
@@ -123,11 +122,11 @@ class Validator(BaseService):
         # into/read from validator's own db.
         self.latest_proposed_epoch = {}
         self.latest_attested_epoch = {}
-        self.this_epoch_assignment = {}
+        self.local_validator_epoch_assignment = {}
         for validator_index in validator_privkeys:
             self.latest_proposed_epoch[validator_index] = Epoch(-1)
             self.latest_attested_epoch[validator_index] = Epoch(-1)
-            self.this_epoch_assignment[validator_index] = (
+            self.local_validator_epoch_assignment[validator_index] = (
                 Epoch(-1),
                 CommitteeAssignment((), CommitteeIndex(-1), Slot(-1)),
             )
@@ -161,24 +160,6 @@ class Validator(BaseService):
                     "SHOULD NOT GET A VALIDATION ERROR"
                     " HERE AS IT IS INTERNAL TO OUR OWN CODE"
                 )
-
-    def _get_this_epoch_assignment(self,
-                                   validator_index: ValidatorIndex,
-                                   this_epoch: Epoch) -> CommitteeAssignment:
-        # update `this_epoch_assignment` if it's outdated
-        if this_epoch > self.this_epoch_assignment[validator_index][0]:
-            state_machine = self.chain.get_state_machine()
-            state = self.chain.get_head_state()
-            self.this_epoch_assignment[validator_index] = (
-                this_epoch,
-                get_committee_assignment(
-                    state,
-                    state_machine.config,
-                    this_epoch,
-                    validator_index,
-                )
-            )
-        return self.this_epoch_assignment[validator_index][1]
 
     async def handle_first_tick(self, slot: Slot) -> None:
         head = self.chain.get_canonical_head()
@@ -266,6 +247,9 @@ class Validator(BaseService):
                             state: BeaconState,
                             state_machine: BaseBeaconStateMachine,
                             head_block: BaseBeaconBlock) -> BaseBeaconBlock:
+        """
+        Propose a block and broadcast it.
+        """
         ready_attestations = self.get_ready_attestations(slot)
         block = create_block_on_state(
             state=state,
@@ -294,6 +278,9 @@ class Validator(BaseService):
                    slot: Slot,
                    state: BeaconState,
                    state_machine: BaseBeaconStateMachine) -> BeaconState:
+        """
+        Forward state to the target ``slot`` and persist the state.
+        """
         post_state = state_machine.state_transition.apply_state_transition(
             state,
             future_slot=slot,
@@ -311,76 +298,108 @@ class Validator(BaseService):
     #
     # Attesting attestation
     #
-    def _is_attesting(self,
-                      validator_index: ValidatorIndex,
-                      assignment: CommitteeAssignment,
-                      slot: Slot,
-                      epoch: Epoch) -> bool:
-        has_attested = epoch <= self.latest_attested_epoch[validator_index]
-        return not has_attested and slot == assignment.slot
+    def _get_local_current_epoch_assignment(
+            self,
+            validator_index: ValidatorIndex,
+            epoch: Epoch) -> CommitteeAssignment:
+        """
+        Return the validator's epoch assignment at the given epoch.
+
+        Note that ``epoch`` <= next_epoch.
+        """
+        is_new_local_validator = validator_index not in self.local_validator_epoch_assignment
+        should_update = (
+            is_new_local_validator or (
+                not is_new_local_validator and (
+                    epoch > self.local_validator_epoch_assignment[validator_index][0]
+                )
+            )
+        )
+        if should_update:
+            state_machine = self.chain.get_state_machine()
+            state = self.chain.get_head_state()
+            self.local_validator_epoch_assignment[validator_index] = (
+                epoch,
+                get_committee_assignment(
+                    state,
+                    state_machine.config,
+                    epoch,
+                    validator_index,
+                )
+            )
+        return self.local_validator_epoch_assignment[validator_index][1]
+
+    def _get_local_current_epoch_assignments(
+        self, epoch: Epoch
+    ) -> Dict[ValidatorIndex, CommitteeAssignment]:
+        """
+        Return the validator assignments of all the local validators.
+        """
+        validator_assignments = {
+            validator_index: self._get_local_current_epoch_assignment(
+                validator_index,
+                epoch,
+            )
+            for validator_index in self.validator_privkeys
+        }
+        return validator_assignments
+
+    def _get_attesting_assignments_at_slot(self, slot: Slot) -> Set[CommitteeAssignment]:
+        """
+        Return the set of ``CommitteeAssignment``s of the given ``slot``
+        """
+        epoch = compute_epoch_at_slot(slot, self.slots_per_epoch)
+        validator_assignments = self._get_local_current_epoch_assignments(epoch)
+        committee_assignments = set(validator_assignments.values())
+        committee_assignments_at_slot = set(
+            filter(
+                lambda committee_assignment: committee_assignment.slot == slot,
+                committee_assignments
+            )
+        )
+        return committee_assignments_at_slot
 
     @to_tuple
-    def _get_attesting_validator_and_committee_index(
-        self,
-        assignments: Dict[ValidatorIndex, CommitteeAssignment],
-        slot: Slot,
-        epoch: Epoch,
-        is_aggregating: bool = False
-    ) -> Iterable[Tuple[ValidatorIndex, CommitteeIndex]]:
-        # TODO(hwwhww) refactor it
-        for validator_index, assignment in assignments.items():
-            aggregator_condition = is_aggregating and assignment.slot == slot
-            attester_condition = (
-                not is_aggregating and
-                self._is_attesting(validator_index, assignment, slot, epoch)
-            )
-            if aggregator_condition or attester_condition:
-                yield (validator_index, assignment.committee_index)
+    def _get_local_attesters_at_assignment(
+        self, target_assignment: CommitteeAssignment
+    ) -> Iterable[ValidatorIndex]:
+        """
+        Return the local attesters that in the committee of the given assignment
+        """
+        for validator_index, (_, assignment) in self.local_validator_epoch_assignment.items():
+            if (
+                assignment.slot == target_assignment.slot and
+                assignment.committee_index == target_assignment.committee_index
+            ):
+                yield validator_index
 
     async def attest(self, slot: Slot) -> Tuple[Attestation, ...]:
+        """
+        Attest the block at the given ``slot``.
+        """
         attestations: Tuple[Attestation, ...] = ()
         head = self.chain.get_canonical_head()
         state_machine = self.chain.get_state_machine()
         state = self.chain.get_head_state()
         epoch = compute_epoch_at_slot(slot, self.slots_per_epoch)
 
-        validator_assignments = {
-            validator_index: self._get_this_epoch_assignment(
-                validator_index,
-                epoch,
-            )
-            for validator_index in self.validator_privkeys
-        }
-        attesting_validators = self._get_attesting_validator_and_committee_index(
-            validator_assignments,
-            slot,
-            epoch,
-        )
-        if len(attesting_validators) == 0:
-            return ()
+        attesting_committee_assignments_at_slot = self._get_attesting_assignments_at_slot(slot)
 
-        # Sort the attesting validators by committee index
-        sorted_attesting_validators = sorted(
-            attesting_validators,
-            key=itemgetter(1),
-        )
-        # Group the attesting validators by committee index
-        attesting_validators_groups = groupby(
-            sorted_attesting_validators,
-            key=itemgetter(1),
-        )
-        for committee_index, group in attesting_validators_groups:
+        for committee_assignment in attesting_committee_assignments_at_slot:
+            committee_index = committee_assignment.committee_index
+            committee = committee_assignment.committee
+
+            attesting_validators_indices = tuple(
+                filter(
+                    lambda attester: self.latest_attested_epoch[attester] < epoch,
+                    self._get_local_attesters_at_assignment(committee_assignment),
+                )
+            )
             # Get the validator_index -> privkey map of the attesting validators
             attesting_validator_privkeys = {
-                attesting_data[0]: self.validator_privkeys[attesting_data[0]]
-                for attesting_data in group
+                index: self.validator_privkeys[index]
+                for index in attesting_validators_indices
             }
-            attesting_validators_indices = tuple(attesting_validator_privkeys.keys())
-            # Get one of the attesting validator's assignment in order to get the committee info
-            assignment = self._get_this_epoch_assignment(
-                attesting_validators_indices[0],
-                epoch,
-            )
             attestation = create_signed_attestation_at_slot(
                 state,
                 state_machine.config,
@@ -388,10 +407,10 @@ class Validator(BaseService):
                 slot,
                 head.signing_root,
                 attesting_validator_privkeys,
-                assignment.committee,
-                assignment.committee_index,
+                committee,
+                committee_index,
                 tuple(
-                    CommitteeValidatorIndex(assignment.committee.index(index))
+                    CommitteeValidatorIndex(committee.index(index))
                     for index in attesting_validators_indices
                 ),
             )
@@ -401,11 +420,9 @@ class Validator(BaseService):
                 head,
                 attestation,
             )
-            for validator_index in attesting_validators_indices:
-                self.latest_attested_epoch[validator_index] = epoch
 
             # await self.p2p_node.broadcast_attestation(attestation)
-            subnet_id = committee_index % ATTESTATION_SUBNET_COUNT
+            subnet_id = SubnetId(committee_index % ATTESTATION_SUBNET_COUNT)
 
             # Import attestation to pool and then broadcast it
             self.import_attestation(attestation)
@@ -419,6 +436,21 @@ class Validator(BaseService):
     #
     # Aggregating attestation
     #
+    @to_tuple
+    def _get_aggregates(
+        self, slot: Slot, committee_index: CommitteeIndex, config: CommitteeConfig
+    ) -> Iterable[Attestation]:
+        """
+        Return the aggregate attestation of the given committee.
+        """
+        # TODO: The aggregator should aggregate the late attestations?
+        aggregatable_attestations = self.get_aggregatable_attestations(slot, committee_index)
+        attestation_groups = groupby(
+            aggregatable_attestations,
+            key=lambda attestation: attestation.data,
+        )
+        for _, group in attestation_groups:
+            yield get_aggregate_from_valid_committee_attestations(tuple(group))
 
     async def create_and_broadcast_aggregate_and_proof(self, slot: Slot) -> None:
         # Check the aggregators selection
@@ -426,38 +458,17 @@ class Validator(BaseService):
         state_machine = self.chain.get_state_machine()
         state = self.chain.get_head_state()
         config = state_machine.config
-        epoch = compute_epoch_at_slot(slot, self.slots_per_epoch)
-        validator_assignments = {
-            validator_index: self._get_this_epoch_assignment(
-                validator_index,
-                epoch,
-            )
-            for validator_index in self.validator_privkeys
-        }
-        attesting_validators = self._get_attesting_validator_and_committee_index(
-            validator_assignments,
-            slot,
-            epoch,
-            is_aggregating=True,
-        )
-        if len(attesting_validators) == 0:
-            return
 
-        # Sort the attesting validators by committee index
-        sorted_attesting_validators = sorted(
-            attesting_validators,
-            key=itemgetter(1),
-        )
-        # Group the attesting validators by committee index
-        attesting_validators_groups = groupby(
-            sorted_attesting_validators,
-            key=itemgetter(1),
-        )
-        for committee_index, group in attesting_validators_groups:
+        attesting_committee_assignments_at_slot = self._get_attesting_assignments_at_slot(slot)
+
+        for committee_assignment in attesting_committee_assignments_at_slot:
+            committee_index = committee_assignment.committee_index
+
+            local_attesters = self._get_local_attesters_at_assignment(committee_assignment)
             # Get the validator_index -> privkey map of the attesting validators
             attesting_validator_privkeys = {
-                attesting_data[0]: self.validator_privkeys[attesting_data[0]]
-                for attesting_data in group
+                index: self.validator_privkeys[index]
+                for index in local_attesters
             }
 
             selected_proofs: Dict[ValidatorIndex, BLSSignature] = {}
@@ -492,16 +503,3 @@ class Validator(BaseService):
                     # Import attestation to pool and then broadcast it
                     self.import_attestation(aggregate_and_proof.aggregate)
                     await self.p2p_node.broadcast_beacon_aggregate_and_proof(aggregate_and_proof)
-
-    @to_tuple
-    def _get_aggregates(
-        self, slot: Slot, committee_index: CommitteeIndex, config: CommitteeConfig
-    ) -> Iterable[Attestation]:
-        # TODO: The aggregator should aggregate the late attestations?
-        aggregatable_attestations = self.get_aggregatable_attestations(slot, committee_index)
-        attestation_groups = groupby(
-            aggregatable_attestations,
-            key=lambda attestation: attestation.data,
-        )
-        for _, group in attestation_groups:
-            yield get_aggregate_from_valid_committee_attestations(tuple(group))
