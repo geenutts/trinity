@@ -267,13 +267,17 @@ class Validator(BaseService):
                             state_machine: BaseBeaconStateMachine,
                             head_block: BaseBeaconBlock) -> BaseBeaconBlock:
         ready_attestations = self.get_ready_attestations(slot)
-        block = self._make_proposing_block(
-            proposer_index=proposer_index,
-            slot=slot,
+        block = create_block_on_state(
             state=state,
+            config=state_machine.config,
             state_machine=state_machine,
+            block_class=SerenityBeaconBlock,
             parent_block=head_block,
+            slot=slot,
+            validator_index=proposer_index,
+            privkey=self.validator_privkeys[proposer_index],
             attestations=ready_attestations,
+            check_proposer_index=False,
         )
         self.logger.debug(
             bold_green("validator %s is proposing a block %s with attestations %s"),
@@ -285,26 +289,6 @@ class Validator(BaseService):
         self.logger.debug("broadcasting block %s", block)
         await self.p2p_node.broadcast_beacon_block(block)
         return block
-
-    def _make_proposing_block(self,
-                              proposer_index: ValidatorIndex,
-                              slot: Slot,
-                              state: BeaconState,
-                              state_machine: BaseBeaconStateMachine,
-                              parent_block: BaseBeaconBlock,
-                              attestations: Sequence[Attestation]) -> BaseBeaconBlock:
-        return create_block_on_state(
-            state=state,
-            config=state_machine.config,
-            state_machine=state_machine,
-            block_class=SerenityBeaconBlock,
-            parent_block=parent_block,
-            slot=slot,
-            validator_index=proposer_index,
-            privkey=self.validator_privkeys[proposer_index],
-            attestations=attestations,
-            check_proposer_index=False,
-        )
 
     def skip_block(self,
                    slot: Slot,
