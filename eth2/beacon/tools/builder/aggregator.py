@@ -1,7 +1,6 @@
 from typing import Sequence
 
 from eth_typing import BLSSignature
-from eth_utils import ValidationError, encode_hex
 from ssz import get_hash_tree_root, uint64
 
 from eth2._utils.bls import bls

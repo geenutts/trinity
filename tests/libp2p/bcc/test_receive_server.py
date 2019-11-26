@@ -22,6 +22,7 @@ from eth2.configs import Eth2GenesisConfig
 from trinity.db.beacon.chain import AsyncBeaconChainDB
 from trinity.protocol.bcc_libp2p.configs import (
     ATTESTATION_SUBNET_COUNT,
+    PUBSUB_TOPIC_BEACON_AGGREGATE_AND_PROOF,
     PUBSUB_TOPIC_BEACON_ATTESTATION,
     PUBSUB_TOPIC_BEACON_BLOCK,
     PUBSUB_TOPIC_COMMITTEE_BEACON_ATTESTATION,
@@ -86,14 +87,18 @@ async def receive_server():
     topic_msg_queues = {
         PUBSUB_TOPIC_BEACON_BLOCK: asyncio.Queue(),
         PUBSUB_TOPIC_BEACON_ATTESTATION: asyncio.Queue(),
+        PUBSUB_TOPIC_BEACON_AGGREGATE_AND_PROOF: asyncio.Queue(),
     }
+    subnets = set(subnet_id for subnet_id in range(ATTESTATION_SUBNET_COUNT))
     for subnet_id in range(ATTESTATION_SUBNET_COUNT):
         topic = (
             PUBSUB_TOPIC_COMMITTEE_BEACON_ATTESTATION.substitute(subnet_id=subnet_id),
         )
         topic_msg_queues[topic] = asyncio.Queue()
     chain = await get_fake_chain()
-    server = ReceiveServerFactory(chain=chain, topic_msg_queues=topic_msg_queues)
+    server = ReceiveServerFactory(
+        chain=chain, topic_msg_queues=topic_msg_queues, subnets=subnets
+    )
     asyncio.ensure_future(server.run())
     await server.ready.wait()
     try:
@@ -109,13 +114,8 @@ async def receive_server_with_mock_process_orphan_blocks_period(
     topic_msg_queues = {
         PUBSUB_TOPIC_BEACON_BLOCK: asyncio.Queue(),
         PUBSUB_TOPIC_BEACON_ATTESTATION: asyncio.Queue(),
+        PUBSUB_TOPIC_BEACON_AGGREGATE_AND_PROOF: asyncio.Queue(),
     }
-    for subnet_id in range(ATTESTATION_SUBNET_COUNT):
-        topic = (
-            PUBSUB_TOPIC_COMMITTEE_BEACON_ATTESTATION.substitute(subnet_id=subnet_id),
-        )
-        topic_msg_queues[topic] = asyncio.Queue()
-
     chain = await get_fake_chain()
     server = ReceiveServerFactory(chain=chain, topic_msg_queues=topic_msg_queues)
     asyncio.ensure_future(server.run())
@@ -382,6 +382,11 @@ async def test_bcc_receive_server_handle_orphan_block_loop(
         return requested_blocks
 
     with monkeypatch.context() as m:
+        for orphan_block in (blocks[4],) + fork_blocks:
+            receive_server.orphan_block_pool.add(orphan_block)
+        await wait_until_true(
+            lambda: len(receive_server.orphan_block_pool) != 0, timeout=4
+        )
         for peer in (peer1, peer2):
             receive_server.p2p_node.handshaked_peers.add(peer)
         m.setattr(
@@ -389,12 +394,9 @@ async def test_bcc_receive_server_handle_orphan_block_loop(
             "request_beacon_blocks_by_root",
             request_beacon_blocks_by_root,
         )
-
-        for orphan_block in (blocks[4],) + fork_blocks:
-            receive_server.orphan_block_pool.add(orphan_block)
         # Wait for receive server to process the orphan blocks
         await wait_until_true(
-            lambda: len(receive_server.orphan_block_pool) == 0, timeout=2
+            lambda: len(receive_server.orphan_block_pool) == 0, timeout=4
         )
         # Check that both peers were requested for blocks
         assert peer_1_called_event.is_set()

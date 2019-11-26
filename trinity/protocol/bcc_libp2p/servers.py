@@ -45,9 +45,6 @@ from eth2.beacon.typing import (
     SigningRoot,
     SubnetId,
 )
-from eth2.beacon.state_machines.forks.serenity.block_validation import (
-    validate_attestation_slot,
-)
 from eth2.beacon.typing import CommitteeIndex, Slot
 
 from trinity.protocol.bcc_libp2p.node import Node
@@ -147,8 +144,7 @@ class BCCReceiveServer(BaseService):
         self.run_daemon_task(self._handle_beacon_attestation_loop())
         self.run_daemon_task(self._handle_beacon_block_loop())
         self.run_daemon_task(self._handle_aggregate_and_proof_loop())
-        for subnet_id in self.subnets:
-            self.run_daemon_task(self._handle_committee_beacon_attestation_loop(subnet_id))
+        self.run_daemon_task(self._handle_committee_beacon_attestation_loop())
         self.run_daemon_task(self._process_orphan_blocks_loop())
         self.ready.set()
         await self.cancellation()
@@ -177,12 +173,17 @@ class BCCReceiveServer(BaseService):
             self._handle_beacon_attestation
         )
 
-    async def _handle_committee_beacon_attestation_loop(self, subnet_id: SubnetId) -> None:
-        topic = PUBSUB_TOPIC_COMMITTEE_BEACON_ATTESTATION.substitute(subnet_id=str(subnet_id))
-        await self._handle_message(
-            topic,
-            self._handle_committee_beacon_attestation,
-        )
+    async def _handle_committee_beacon_attestation_loop(self) -> None:
+        while True:
+            await asyncio.sleep(0.5)
+            for subnet_id in self.subnets:
+                topic = PUBSUB_TOPIC_COMMITTEE_BEACON_ATTESTATION.substitute(
+                    subnet_id=str(subnet_id)
+                )
+                await self._handle_message(
+                    topic,
+                    self._handle_committee_beacon_attestation,
+                )
 
     async def _handle_aggregate_and_proof_loop(self) -> None:
         await self._handle_message(
@@ -358,35 +359,29 @@ class BCCReceiveServer(BaseService):
     # Exposed APIs for Validator
     #
     @to_tuple
-    def get_ready_attestations(
-        self,
-        current_slot: Slot
-    ) -> Iterable[Attestation]:
+    def get_ready_attestations(self, current_slot: Slot) -> Iterable[Attestation]:
+        """
+        Get the attestations that are ready to be included in ``current_slot`` block.
+        """
         config = self.chain.get_state_machine().config
-        for attestation in self.attestation_pool.get_all():
-            try:
-                validate_attestation_slot(
-                    attestation.data.slot,
-                    current_slot,
-                    config.SLOTS_PER_EPOCH,
-                    config.MIN_ATTESTATION_INCLUSION_DELAY,
-                )
-            except ValidationError:
-                continue
-            else:
-                yield attestation
+        return self.attestation_pool.get_valid_attestation_by_current_slot(current_slot, config)
 
     def get_aggregatable_attestations(
         self,
         slot: Slot,
         committee_index: CommitteeIndex
     ) -> Tuple[Attestation, ...]:
-        return tuple(
-            filter(
-                lambda attestation:
-                slot == attestation.data.slot and committee_index == attestation.data.index,
-                self.attestation_pool.get_all()
-            )
+        """
+        Get the attestations of ``slot`` and ``committee_index``.
+        """
+        try:
+            block = self.chain.get_canonical_block_by_slot(slot)
+        except BlockNotFound:
+            return ()
+
+        beacon_block_root = block.signing_root
+        return self.attestation_pool.get_acceptable_attestations(
+            slot, committee_index, beacon_block_root
         )
 
     def import_attestation(self, attestation: Attestation) -> None:
