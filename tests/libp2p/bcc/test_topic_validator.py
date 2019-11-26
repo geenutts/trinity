@@ -11,7 +11,6 @@ from trinity.protocol.bcc_libp2p.configs import (
 @pytest.mark.asyncio
 async def test_setup_topic_validators(nodes):
     node = nodes[0]
-    subnet_id = 0
     topic_1 = PUBSUB_TOPIC_BEACON_BLOCK
     topic_2 = PUBSUB_TOPIC_BEACON_ATTESTATION
     topic_3 = PUBSUB_TOPIC_BEACON_AGGREGATE_AND_PROOF

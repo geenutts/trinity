@@ -236,7 +236,16 @@ class Validator(BaseService):
         await self.attest(slot)
 
     async def handle_third_tick(self, slot: Slot) -> None:
-        await self.create_and_broadcast_aggregate_and_proof(slot)
+        state_machine = self.chain.get_state_machine()
+        state = self.chain.get_head_state()
+        if state.slot < slot:
+            self.skip_block(
+                slot=slot,
+                state=state,
+                state_machine=state_machine,
+            )
+
+        await self.aggregate(slot)
 
     #
     # Proposing block
@@ -375,7 +384,7 @@ class Validator(BaseService):
 
     async def attest(self, slot: Slot) -> Tuple[Attestation, ...]:
         """
-        Attest the block at the given ``slot``.
+        Attest the block at the given ``slot`` and broadcast them.
         """
         attestations: Tuple[Attestation, ...] = ()
         head = self.chain.get_canonical_head()
@@ -452,9 +461,15 @@ class Validator(BaseService):
         for _, group in attestation_groups:
             yield get_aggregate_from_valid_committee_attestations(tuple(group))
 
-    async def create_and_broadcast_aggregate_and_proof(self, slot: Slot) -> None:
+    async def aggregate(
+        self,
+        slot: Slot
+    ) -> Tuple[AggregateAndProof, ...]:
+        """
+        Aggregate the attestations at ``slot`` and broadcast them.
+        """
         # Check the aggregators selection
-        # aggregate_and_proofs: Tuple[AggregateAndProof] = ()
+        aggregate_and_proofs: Tuple[AggregateAndProof, ...] = ()
         state_machine = self.chain.get_state_machine()
         state = self.chain.get_head_state()
         config = state_machine.config
@@ -503,3 +518,6 @@ class Validator(BaseService):
                     # Import attestation to pool and then broadcast it
                     self.import_attestation(aggregate_and_proof.aggregate)
                     await self.p2p_node.broadcast_beacon_aggregate_and_proof(aggregate_and_proof)
+                    aggregate_and_proofs += (aggregate_and_proof,)
+
+        return aggregate_and_proofs
