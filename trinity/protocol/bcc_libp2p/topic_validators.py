@@ -12,24 +12,19 @@ from eth_utils import (
 
 from eth.exceptions import BlockNotFound
 
-from eth2.beacon.epoch_processing_helpers import (
-    get_attesting_indices,
-)
 from eth2.beacon.types.aggregate_and_proof import AggregateAndProof
 from eth2.beacon.types.attestations import Attestation
 from eth2.beacon.chains.base import BaseBeaconChain
 from eth2.beacon.types.blocks import BeaconBlock
-from eth2.beacon.types.states import BeaconState
 from eth2.beacon.state_machines.forks.serenity.block_validation import (
     validate_attestation,
     validate_proposer_signature,
 )
 from eth2.beacon.tools.builder.aggregator import (
-    is_aggregator,
-    validate_aggregator_proof,
+    validate_aggregate_and_proof,
 )
 from eth2.beacon.typing import Slot
-from eth2.configs import CommitteeConfig, Eth2Config
+from eth2.configs import CommitteeConfig
 
 from libp2p.peer.id import ID
 from libp2p.pubsub.pb import rpc_pb2
@@ -143,56 +138,6 @@ def get_beacon_attestation_validator(chain: BaseBeaconChain) -> Callable[..., bo
     return beacon_attestation_validator
 
 
-def validate_aggregate_and_proof(
-    state: BeaconState,
-    aggregate_and_proof: AggregateAndProof,
-    config: Eth2Config,
-) -> None:
-    """
-    Validate aggregate_and_proof
-
-    Reference: https://github.com/ethereum/eth2.0-specs/blob/v09x/specs/networking/p2p-interface.md#global-topics  # noqa: E501
-    """
-    if (
-        aggregate_and_proof.aggregate.data.slot + ATTESTATION_PROPAGATION_SLOT_RANGE < state.slot or
-        aggregate_and_proof.aggregate.data.slot > state.slot
-    ):
-        raise ValidationError(
-            "aggregate_and_proof.aggregate.data.slot should be within the last"
-            " ATTESTATION_PROPAGATION_SLOT_RANGE slots. Got"
-            f" aggregate_and_proof.aggregate.data.slot={aggregate_and_proof.aggregate.data.slot},"
-            f" current slot={state.slot},"
-            f" ATTESTATION_PROPAGATION_SLOT_RANGE={ATTESTATION_PROPAGATION_SLOT_RANGE}"
-        )
-
-    attesting_indices = get_attesting_indices(
-        state,
-        aggregate_and_proof.aggregate.data,
-        aggregate_and_proof.aggregate.aggregation_bits,
-        CommitteeConfig(config),
-    )
-    if aggregate_and_proof.index not in attesting_indices:
-        raise ValidationError(
-            f"The aggregator index ({aggregate_and_proof.index}) is not within"
-            f" the aggregate's committee {attesting_indices}"
-        )
-
-    if not is_aggregator(
-        state,
-        aggregate_and_proof.aggregate.data.slot,
-        aggregate_and_proof.aggregate.data.index,
-        aggregate_and_proof.selection_proof,
-        CommitteeConfig(config),
-    ):
-        raise ValidationError(
-            f"The given validator {aggregate_and_proof.index} is not selected aggregator"
-        )
-
-    validate_aggregator_proof(state, aggregate_and_proof, CommitteeConfig(config))
-
-    validate_attestation(state, aggregate_and_proof.aggregate, config)
-
-
 def get_beacon_aggregate_and_proof_validator(chain: BaseBeaconChain) -> Callable[..., bool]:
     def beacon_aggregate_and_proof_validator(msg_forwarder: ID, msg: rpc_pb2.Message) -> bool:
         try:
@@ -248,7 +193,8 @@ def get_beacon_aggregate_and_proof_validator(chain: BaseBeaconChain) -> Callable
             validate_aggregate_and_proof(
                 future_state,
                 aggregate_and_proof,
-                config,
+                ATTESTATION_PROPAGATION_SLOT_RANGE,
+                CommitteeConfig(config),
             )
         except ValidationError as error:
             logger.debug(

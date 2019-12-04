@@ -30,7 +30,12 @@ class BeaconChainFactory(factory.Factory):
     ) -> BaseBeaconChain:
         override_lengths(cls.config)
 
-        keymap = mk_keymap_of_size(cls.num_validators)
+        if "num_validators" in kwargs:
+            num_validators = kwargs["num_validators"]
+        else:
+            num_validators = cls.num_validators
+
+        keymap = mk_keymap_of_size(num_validators)
 
         genesis_state, genesis_block = create_mock_genesis(
             config=cls.config,

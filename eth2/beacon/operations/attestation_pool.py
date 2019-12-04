@@ -12,7 +12,9 @@ from eth2.configs import Eth2Config
 from .pool import OperationPool
 
 
-def is_valid_slot(attestation: Attestation, current_slot: Slot, config: Eth2Config) -> bool:
+def is_valid_slot(
+    attestation: Attestation, current_slot: Slot, config: Eth2Config
+) -> bool:
     try:
         validate_attestation_slot(
             attestation.data.slot,
@@ -28,14 +30,12 @@ def is_valid_slot(attestation: Attestation, current_slot: Slot, config: Eth2Conf
 
 class AttestationPool(OperationPool[Attestation]):
     def get_valid_attestation_by_current_slot(
-        self,
-        slot: Slot,
-        config: Eth2Config
+        self, slot: Slot, config: Eth2Config
     ) -> Tuple[Attestation, ...]:
         return tuple(
             filter(
                 lambda attestation: is_valid_slot(attestation, slot, config),
-                self._pool_storage.values()
+                self._pool_storage.values(),
             )
         )
 
@@ -43,14 +43,15 @@ class AttestationPool(OperationPool[Attestation]):
         self,
         slot: Slot,
         committee_index: CommitteeIndex,
-        beacon_block_root: SigningRoot
+        beacon_block_root: SigningRoot,
     ) -> Tuple[Attestation, ...]:
         return tuple(
             filter(
-                lambda attestation:
-                beacon_block_root == attestation.data.beacon_block_root and
-                slot == attestation.data.slot and
-                committee_index == attestation.data.index,
-                self._pool_storage.values()
+                lambda attestation: (
+                    beacon_block_root == attestation.data.beacon_block_root
+                    and slot == attestation.data.slot
+                    and committee_index == attestation.data.index
+                ),
+                self._pool_storage.values(),
             )
         )

@@ -377,8 +377,8 @@ class Validator(BaseService):
         """
         for validator_index, (_, assignment) in self.local_validator_epoch_assignment.items():
             if (
-                assignment.slot == target_assignment.slot and
-                assignment.committee_index == target_assignment.committee_index
+                assignment.slot == target_assignment.slot
+                and assignment.committee_index == target_assignment.committee_index
             ):
                 yield validator_index
 
@@ -475,7 +475,7 @@ class Validator(BaseService):
         config = state_machine.config
 
         attesting_committee_assignments_at_slot = self._get_attesting_assignments_at_slot(slot)
-
+        # 1. For each committee_assignment at the given slot
         for committee_assignment in attesting_committee_assignments_at_slot:
             committee_index = committee_assignment.committee_index
 
@@ -487,7 +487,9 @@ class Validator(BaseService):
             }
 
             selected_proofs: Dict[ValidatorIndex, BLSSignature] = {}
+            # 2. For each attester
             for validator_index, privkey in attesting_validator_privkeys.items():
+                # Check if the vallidator is one of the aggregators
                 signature = slot_signature(
                     state, slot, privkey, CommitteeConfig(config),
                 )
@@ -498,24 +500,24 @@ class Validator(BaseService):
                     signature,
                     CommitteeConfig(config),
                 )
-
                 if is_aggregator_result:
                     self.logger.debug(
                         f"validator ({validator_index}) is aggregator of"
                         f" committee_index={committee_index} at slot={slot}"
                     )
                     selected_proofs[validator_index] = signature
+                else:
+                    continue
 
-            for validator_index, selected_proof in selected_proofs.items():
                 aggregates = self._get_aggregates(slot, committee_index, config)
+                # 3. For each aggregate
+                # (it's possible with same CommitteeIndex and different AttesatationData)
                 for aggregate in aggregates:
                     aggregate_and_proof = AggregateAndProof(
                         index=validator_index,
                         aggregate=aggregate,
-                        selection_proof=selected_proof,
+                        selection_proof=selected_proofs[validator_index],
                     )
-
-                    # Import attestation to pool and then broadcast it
                     self.import_attestation(aggregate_and_proof.aggregate)
                     await self.p2p_node.broadcast_beacon_aggregate_and_proof(aggregate_and_proof)
                     aggregate_and_proofs += (aggregate_and_proof,)

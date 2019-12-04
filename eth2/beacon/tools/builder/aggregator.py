@@ -1,11 +1,14 @@
 from typing import Sequence
 
 from eth_typing import BLSSignature
+from eth_utils import ValidationError
 from ssz import get_hash_tree_root, uint64
 
 from eth2._utils.bls import bls
 from eth2._utils.hash import hash_eth2
+from eth2.beacon.attestation_helpers import validate_indexed_attestation_aggregate_signature
 from eth2.beacon.committee_helpers import get_beacon_committee
+from eth2.beacon.epoch_processing_helpers import get_attesting_indices, get_indexed_attestation
 from eth2.beacon.helpers import compute_epoch_at_slot, get_domain
 from eth2.beacon.signature_domain import SignatureDomain
 from eth2.beacon.types.aggregate_and_proof import AggregateAndProof
@@ -76,11 +79,68 @@ def get_aggregate_from_valid_committee_attestations(
     ]
     aggregation_bits = tuple(map(any, zip(*all_aggregation_bits)))
 
+    assert len(attestations) > 0
+
     return Attestation(
         data=attestations[0].data,
         aggregation_bits=Bitfield(aggregation_bits),
         signature=aggregate_signature,
     )
+
+
+#
+# Validation
+#
+
+
+def validate_aggregate_and_proof(
+    state: BeaconState,
+    aggregate_and_proof: AggregateAndProof,
+    attestation_propagation_slot_range: int,
+    config: CommitteeConfig,
+) -> None:
+    """
+    Validate aggregate_and_proof
+
+    Reference: https://github.com/ethereum/eth2.0-specs/blob/v09x/specs/networking/p2p-interface.md#global-topics  # noqa: E501
+    """
+    if (
+        aggregate_and_proof.aggregate.data.slot + attestation_propagation_slot_range < state.slot
+        or aggregate_and_proof.aggregate.data.slot > state.slot
+    ):
+        raise ValidationError(
+            "aggregate_and_proof.aggregate.data.slot should be within the last"
+            " {attestation_propagation_slot_range} slots. Got"
+            f" aggregate_and_proof.aggregate.data.slot={aggregate_and_proof.aggregate.data.slot},"
+            f" current slot={state.slot}"
+        )
+
+    attesting_indices = get_attesting_indices(
+        state,
+        aggregate_and_proof.aggregate.data,
+        aggregate_and_proof.aggregate.aggregation_bits,
+        config,
+    )
+    if aggregate_and_proof.index not in attesting_indices:
+        raise ValidationError(
+            f"The aggregator index ({aggregate_and_proof.index}) is not within"
+            f" the aggregate's committee {attesting_indices}"
+        )
+
+    if not is_aggregator(
+        state,
+        aggregate_and_proof.aggregate.data.slot,
+        aggregate_and_proof.aggregate.data.index,
+        aggregate_and_proof.selection_proof,
+        config,
+    ):
+        raise ValidationError(
+            f"The given validator {aggregate_and_proof.index} is not selected aggregator"
+        )
+
+    validate_aggregator_proof(state, aggregate_and_proof, config)
+
+    validate_aggregate_signature(state, aggregate_and_proof.aggregate, config)
 
 
 def validate_aggregator_proof(
@@ -101,4 +161,17 @@ def validate_aggregator_proof(
         pubkey=pubkey,
         signature=aggregate_and_proof.selection_proof,
         domain=domain,
+    )
+
+
+def validate_aggregate_signature(
+    state: BeaconState,
+    attestation: Attestation,
+    config: CommitteeConfig
+) -> None:
+    indexed_attestation = get_indexed_attestation(state, attestation, config)
+    validate_indexed_attestation_aggregate_signature(
+        state,
+        indexed_attestation,
+        config.SLOTS_PER_EPOCH,
     )
