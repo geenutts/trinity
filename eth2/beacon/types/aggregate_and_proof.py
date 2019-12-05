@@ -12,26 +12,28 @@ from eth2.beacon.typing import ValidatorIndex
 class AggregateAndProof(ssz.Serializable):
 
     fields = [
-        ("index", uint64),
-        ("selection_proof", bytes96),
+        ("aggregator_index", uint64),
         ("aggregate", Attestation),
+        ("selection_proof", bytes96),
     ]
 
     def __init__(
         self,
-        index: ValidatorIndex = default_validator_index,
-        selection_proof: BLSSignature = EMPTY_SIGNATURE,
+        aggregator_index: ValidatorIndex = default_validator_index,
         aggregate: Attestation = default_attestation,
+        selection_proof: BLSSignature = EMPTY_SIGNATURE,
     ) -> None:
         super().__init__(
-            index=index, selection_proof=selection_proof, aggregate=aggregate
+            aggregator_index=aggregator_index,
+            aggregate=aggregate,
+            selection_proof=selection_proof,
         )
 
     def __str__(self) -> str:
         return (
-            f"index={self.index},"
-            f" selection_proof={humanize_hash(self.selection_proof)},"
+            f"aggregator_index={self.aggregator_index},"
             f" aggregate={self.aggregate},"
+            f" selection_proof={humanize_hash(self.selection_proof)},"
         )
 
 

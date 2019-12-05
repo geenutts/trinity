@@ -572,9 +572,9 @@ def sample_state(sample_beacon_state_params):
 @pytest.fixture
 def sample_aggregate_and_proof_params(sample_attestation_params):
     return {
-        "index": 5,
-        "selection_proof": 1,
+        "aggregator_index": 5,
         "aggregate": Attestation(**sample_attestation_params),
+        "selection_proof": 1,
     }
 
 

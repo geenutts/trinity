@@ -36,8 +36,8 @@ from eth2.beacon.state_machines.forks.serenity.blocks import (
 )
 from eth2.beacon.tools.builder.aggregator import (
     get_aggregate_from_valid_committee_attestations,
+    get_slot_signature,
     is_aggregator,
-    slot_signature,
 )
 from eth2.beacon.tools.builder.committee_assignment import (
     CommitteeAssignment,
@@ -490,7 +490,7 @@ class Validator(BaseService):
             # 2. For each attester
             for validator_index, privkey in attesting_validator_privkeys.items():
                 # Check if the vallidator is one of the aggregators
-                signature = slot_signature(
+                signature = get_slot_signature(
                     state, slot, privkey, CommitteeConfig(config),
                 )
                 is_aggregator_result = is_aggregator(
@@ -514,7 +514,7 @@ class Validator(BaseService):
                 # (it's possible with same CommitteeIndex and different AttesatationData)
                 for aggregate in aggregates:
                     aggregate_and_proof = AggregateAndProof(
-                        index=validator_index,
+                        aggregator_index=validator_index,
                         aggregate=aggregate,
                         selection_proof=selected_proofs[validator_index],
                     )
