@@ -61,6 +61,38 @@ def validate_proposer_index(
         raise ProposerIndexError
 
 
+def create_unsigned_block_on_state(
+    *,
+    state: BeaconState,
+    config: Eth2Config,
+    block_class: Type[BaseBeaconBlock],
+    parent_block: BaseBeaconBlock,
+    slot: Slot,
+    attestations: Sequence[Attestation],
+    eth1_data: Eth1Data = None,
+    deposits: Sequence[Deposit] = None,
+) -> BaseBeaconBlock:
+    block = block_class.from_parent(
+        parent_block=parent_block, block_params=FromBlockParams(slot=slot)
+    )
+
+    # MAX_ATTESTATIONS
+    attestations = attestations[: config.MAX_ATTESTATIONS]
+
+    # TODO: Add more operations
+    if eth1_data is None:
+        eth1_data = state.eth1_data
+    body = BeaconBlockBody.create(
+        eth1_data=eth1_data, attestations=attestations
+    )
+    if deposits is not None and len(deposits) > 0:
+        body = body.set("deposits", deposits)
+
+    block = block.set("body", body)
+
+    return block
+
+
 def create_block_on_state(
     *,
     state: BeaconState,
@@ -82,27 +114,26 @@ def create_block_on_state(
     if check_proposer_index:
         validate_proposer_index(state, config, slot, validator_index)
 
-    block = block_class.from_parent(
-        parent_block=parent_block, block_params=FromBlockParams(slot=slot)
+    block = create_unsigned_block_on_state(
+        state=state,
+        config=config,
+        block_class=block_class,
+        parent_block=parent_block,
+        slot=slot,
+        attestations=attestations,
+        eth1_data=eth1_data,
+        deposits=deposits,
     )
 
-    # MAX_ATTESTATIONS
-    attestations = attestations[: config.MAX_ATTESTATIONS]
-
-    # TODO: Add more operations
+    # Randao reveal
     randao_reveal = _generate_randao_reveal(privkey, slot, state, config)
-    if eth1_data is None:
-        eth1_data = state.eth1_data
-    body = BeaconBlockBody.create(
-        randao_reveal=randao_reveal, eth1_data=eth1_data, attestations=attestations
+    block = block.set(
+        'body',
+        block.body.set('randao_reveal', randao_reveal)
     )
-    if deposits is not None and len(deposits) > 0:
-        body = body.set("deposits", deposits)
-
-    block = block.set("body", body)
 
     # Apply state transition to get state root
-    state, block = state_machine.import_block(
+    post_state, block = state_machine.import_block(
         block, state, check_proposer_signature=False
     )
 
@@ -110,7 +141,7 @@ def create_block_on_state(
     signature = sign_transaction(
         message_hash=block.signing_root,
         privkey=privkey,
-        state=state,
+        state=post_state,
         slot=slot,
         signature_domain=SignatureDomain.DOMAIN_BEACON_PROPOSER,
         slots_per_epoch=config.SLOTS_PER_EPOCH,

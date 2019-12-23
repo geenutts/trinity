@@ -26,6 +26,7 @@ from trinity.boot_info import BootInfo
 from trinity.config import BeaconAppConfig
 from trinity.db.manager import DBClient
 from trinity.extensibility import AsyncioIsolatedComponent
+from trinity.http.handlers.api_handler import APIHandler
 from trinity.http.handlers.metrics_handler import MetricsHandler
 from trinity.http.main import (
     HTTPServer,
@@ -34,11 +35,15 @@ from trinity.protocol.bcc_libp2p.configs import ATTESTATION_SUBNET_COUNT
 from trinity.protocol.bcc_libp2p.node import Node
 from trinity.protocol.bcc_libp2p.servers import BCCReceiveServer
 
+from .chain_maintainer import ChainMaintainer
 from .slot_ticker import (
     SlotTicker,
 )
 from .validator import (
     Validator,
+)
+from .validator_handler import (
+    ValidatorHandler,
 )
 
 from trinity.sync.beacon.chain import BeaconChainSyncer
@@ -70,7 +75,7 @@ class BeaconNodeComponent(AsyncioIsolatedComponent):
         arg_parser.add_argument(
             "--enable-metrics",
             action="store_true",
-            help="Enables the HTTP Server",
+            help="Enables the Metrics Server",
         )
         arg_parser.add_argument(
             "--metrics-port",
@@ -82,6 +87,22 @@ class BeaconNodeComponent(AsyncioIsolatedComponent):
             "--debug-libp2p",
             action="store_true",
             help="Enable debug logging of libp2p",
+        )
+        arg_parser.add_argument(
+            "--enable-api",
+            action="store_true",
+            help="Enables the API Server",
+        )
+        arg_parser.add_argument(
+            "--api-port",
+            type=int,
+            help="API server port",
+            default=5005,
+        )
+        arg_parser.add_argument(
+            "--bn-only",
+            action="store_true",
+            help="Run with BeaconNode only mode",
         )
 
     @property
@@ -181,6 +202,22 @@ class BeaconNodeComponent(AsyncioIsolatedComponent):
                 import_attestation_fn=receive_server.import_attestation,
             )
 
+            chain_maintainer = ChainMaintainer(
+                chain=chain,
+                event_bus=event_bus,
+                token=libp2p_node.cancel_token,
+            )
+
+            validator_handler = ValidatorHandler(
+                chain=chain,
+                p2p_node=libp2p_node,
+                event_bus=event_bus,
+                get_ready_attestations_fn=receive_server.get_ready_attestations,
+                get_aggregatable_attestations_fn=receive_server.get_aggregatable_attestations,
+                import_attestation_fn=receive_server.import_attestation,
+                token = libp2p_node.cancel_token,
+            )
+
             slot_ticker = SlotTicker(
                 genesis_slot=chain_config.genesis_config.GENESIS_SLOT,
                 genesis_time=chain_config.genesis_data.genesis_time,
@@ -200,16 +237,29 @@ class BeaconNodeComponent(AsyncioIsolatedComponent):
                 event_bus=event_bus,
                 token=libp2p_node.cancel_token,
             )
-            http_server = HTTPServer(
+            metrics_server = HTTPServer(
                 handler=MetricsHandler.handle(chain)(event_bus),
                 port=boot_info.args.metrics_port,
             )
+            api_server = HTTPServer(
+                handler=APIHandler.handle(chain)(event_bus),
+                port=boot_info.args.api_port,
+            )
 
             services: Tuple[BaseService, ...] = (
-                libp2p_node, receive_server, slot_ticker, validator, syncer
+                libp2p_node, receive_server, slot_ticker, syncer
             )
+
+            if boot_info.args.bn_only:
+                services += (chain_maintainer, validator_handler)
+            else:
+                services += (validator,)
+
             if boot_info.args.enable_metrics:
-                services += (http_server,)
+                services += (metrics_server,)
+
+            if boot_info.args.enable_api:
+                services += (api_server,)
 
             async with AsyncExitStack() as stack:
                 for service in services:
