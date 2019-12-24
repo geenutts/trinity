@@ -19,10 +19,7 @@ from trinity.rpc.modules import BeaconChainRPCModule
 
 class Beacon(BeaconChainRPCModule):
 
-    async def currentSlot(self) -> str:
-        return hex(666)
-
-    async def head(self) -> Dict[Any, Any]:
+    async def getHead(self) -> Dict[Any, Any]:
         block = await self.chain.coro_get_canonical_head(BeaconBlock)
         return dict(
             slot=block.slot,

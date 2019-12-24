@@ -58,18 +58,21 @@ async def test_json_rpc_http_server(
             raw_server = await aiohttp_raw_server(RPCHandler.handle(rpc.execute))
             client = await aiohttp_client(raw_server)
 
-            request_id = 1
-            request_data = {
-                "jsonrpc": "2.0",
-                "method": "beacon_head",
-                "params": [],
-                "id": request_id,
-            }
+            # request_id = 1
+            # request_data = {
+            #     "jsonrpc": "2.0",
+            #     "method": "beacon_head",
+            #     "params": [],
+            #     "id": request_id,
+            # }
+            #
+            # response = await client.post('/', json=request_data)
 
-            response = await client.post('/', json=request_data)
+            response = await client.get('/beacon/head')
             response_data = await response.json()
 
-            assert response_data['id'] == request_id
+
+            # assert response_data['id'] == request_id
             result = response_data['result']
             assert result['slot'] == 0
             assert decode_hex(result['block_root']) == genesis_block.signing_root
