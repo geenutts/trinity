@@ -48,9 +48,7 @@ class FakeNode:
     async def broadcast_beacon_aggregate_and_proof(self, aggregate_and_proof):
         pass
 
-
     handshaked_peers = PeerPool()
-
 
 
 def create_validator(
@@ -112,7 +110,11 @@ async def get_validator(event_loop, event_bus, indices, num_validators=None) -> 
     return v
 
 
-async def get_linked_validators(event_loop, event_bus, num_validators) -> Tuple[Validator, Validator]:
+async def get_linked_validators(
+        event_loop,
+        event_bus,
+        num_validators
+) -> Tuple[Validator, Validator]:
     keymap = mk_keymap_of_size(num_validators)
     all_indices = tuple(
         index for index in range(len(keymap))
