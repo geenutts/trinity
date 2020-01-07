@@ -97,8 +97,6 @@ class Validator(BaseValidator):
     latest_attested_epoch: Dict[ValidatorIndex, Epoch]
     local_validator_epoch_assignment: Dict[ValidatorIndex, Tuple[Epoch, CommitteeAssignment]]
 
-    starting_eth1_block_hash: Hash32
-
     def __init__(
             self,
             chain: BaseBeaconChain,
@@ -134,9 +132,6 @@ class Validator(BaseValidator):
                 Epoch(-1),
                 CommitteeAssignment((), CommitteeIndex(-1), Slot(-1)),
             )
-        self.get_ready_attestations: GetReadyAttestationsFn = get_ready_attestations_fn
-        self.get_aggregatable_attestations: GetAggregatableAttestationsFn = get_aggregatable_attestations_fn  # noqa: E501
-        self.import_attestation: ImportAttestationFn = import_attestation_fn
 
     async def _run(self) -> None:
         self.logger.info(
