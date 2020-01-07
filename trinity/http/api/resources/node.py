@@ -7,7 +7,7 @@ from ssz.tools import (
 )
 
 from eth2.beacon.types.forks import Fork
-from trinity.http.resources.base import BaseResource, get_method
+from trinity.http.api.resources.base import BaseResource, get_method
 
 
 class Node(BaseResource):

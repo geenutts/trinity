@@ -7,7 +7,7 @@ from ssz.tools import to_formatted_dict
 
 from eth2.beacon.types.blocks import BeaconBlock
 from eth2.beacon.typing import SigningRoot, Slot
-from trinity.http.resources.base import BaseResource, get_method
+from trinity.http.api.resources.base import BaseResource, get_method
 from trinity.http.exceptions import APIServerError
 
 

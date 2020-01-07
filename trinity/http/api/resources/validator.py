@@ -22,7 +22,7 @@ from trinity.http.exceptions import (
     InvalidRequestSyntaxError_400,
     NotFoundError_404,
 )
-from trinity.http.resources.base import BaseResource, get_method, post_method
+from trinity.http.api.resources.base import BaseResource, get_method, post_method
 
 
 def json_to_ssz(json_object: Union[str, bytes, bytearray], ssz_codec: BaseSedes) -> Any:

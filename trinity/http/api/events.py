@@ -9,6 +9,8 @@ from lahja import (
     BaseEvent,
     BaseRequestResponseEvent,
 )
+
+from eth2.beacon.types.blocks import BaseBeaconBlock
 from libp2p.peer.id import ID
 
 
@@ -24,3 +26,16 @@ class Libp2pPeerIDRequest(BaseRequestResponseEvent[Libp2pPeerIDResponse]):
     @staticmethod
     def expected_response_type() -> Type[Libp2pPeerIDResponse]:
         return Libp2pPeerIDResponse
+
+
+@dataclass
+class GetBeaconBlockResponse(BaseEvent):
+    """
+    """
+    result: BaseBeaconBlock
+
+
+class GetBeaconBlockRequest(BaseRequestResponseEvent[GetBeaconBlockResponse]):
+    @staticmethod
+    def expected_response_type() -> Type[GetBeaconBlockResponse]:
+        return GetBeaconBlockResponse

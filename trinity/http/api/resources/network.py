@@ -1,10 +1,10 @@
 from typing import Any, Tuple
 from aiohttp import web
 from trinity.components.eth2.metrics.events import Libp2pPeersRequest
-from trinity.http.events import (
+from trinity.http.api.events import (
     Libp2pPeerIDRequest,
 )
-from trinity.http.resources.base import BaseResource, get_method
+from trinity.http.api.resources.base import BaseResource, get_method
 
 
 class Network(BaseResource):

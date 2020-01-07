@@ -158,7 +158,7 @@ from trinity.components.eth2.metrics.events import (
     Libp2pPeersRequest,
     Libp2pPeersResponse,
 )
-from trinity.http.events import (
+from trinity.http.api.events import (
     Libp2pPeerIDRequest,
     Libp2pPeerIDResponse,
 )

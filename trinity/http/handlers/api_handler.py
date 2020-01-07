@@ -14,11 +14,11 @@ from eth2.beacon.chains.base import (
 
 from trinity.http.handlers.base import BaseHTTPHandler, response_error
 from trinity.http.exceptions import APIServerError, InvalidRequestSyntaxError_400
-from trinity.http.resources.base import BaseResource
-from trinity.http.resources.beacon import Beacon
-from trinity.http.resources.network import Network
-from trinity.http.resources.node import Node
-from trinity.http.resources.validator import Validator
+from trinity.http.api.resources.base import BaseResource
+from trinity.http.api.resources.beacon import Beacon
+from trinity.http.api.resources.network import Network
+from trinity.http.api.resources.node import Node
+from trinity.http.api.resources.validator import Validator
 
 logger = logging.getLogger('trinity.http.handlers.api_handler.APIHandler')
 
