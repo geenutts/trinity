@@ -21,6 +21,7 @@ from async_service import (
     Service,
     TrioManager,
 )
+from eth.db.backends.memory import MemoryDB
 
 from p2p.discv5.channel_services import (
     DatagramReceiver,
@@ -38,13 +39,13 @@ from p2p.discv5.endpoint_tracker import (
     EndpointTracker,
     EndpointVote,
 )
-from p2p.discv5.enr import (
+from p2p.enr import (
     ENR,
 )
-from p2p.discv5.enr_db import (
-    MemoryEnrDb,
+from p2p.node_db import (
+    NodeDB,
 )
-from p2p.discv5.identity_schemes import (
+from p2p.identity_schemes import (
     default_identity_scheme_registry,
 )
 from p2p.discv5.message_dispatcher import (
@@ -62,7 +63,8 @@ from p2p.discv5.routing_table import (
 from p2p.discv5.routing_table_manager import (
     RoutingTableManager,
 )
-from p2p.discv5.typing import (
+from p2p.kademlia import KademliaRoutingTable
+from p2p.typing import (
     NodeID,
 )
 
@@ -90,8 +92,8 @@ class DiscV5Plugin(Service):
 
         self.message_type_registry = default_message_type_registry
         self.identity_scheme_registry = default_identity_scheme_registry
-        self.routing_table = FlatRoutingTable()
-        self.enr_db = MemoryEnrDb(self.identity_scheme_registry)
+        self.routing_table = KademliaRoutingTable(self.local_node_id, bucket_size=16)
+        self.enr_db = NodeDB(self.identity_scheme_registry, MemoryDB())
 
         outgoing_datagram_channels: ChannelPair[OutgoingDatagram] = trio.open_memory_channel(0)
         incoming_datagram_channels: ChannelPair[IncomingDatagram] = trio.open_memory_channel(0)
@@ -131,7 +133,7 @@ class DiscV5Plugin(Service):
         self.packer = Packer(
             local_private_key=self.local_private_key,
             local_node_id=self.local_node_id,
-            enr_db=self.enr_db,
+            node_db=self.enr_db,
             message_type_registry=self.message_type_registry,
             incoming_packet_receive_channel=incoming_packet_channels[1],
             incoming_message_send_channel=incoming_message_channels[0],
@@ -140,7 +142,7 @@ class DiscV5Plugin(Service):
         )
 
         self.message_dispatcher = MessageDispatcher(
-            enr_db=self.enr_db,
+            node_db=self.enr_db,
             incoming_message_receive_channel=incoming_message_channels[1],
             outgoing_message_send_channel=outgoing_message_channels[0],
         )
@@ -148,7 +150,7 @@ class DiscV5Plugin(Service):
         self.endpoint_tracker = EndpointTracker(
             local_private_key=self.local_private_key,
             local_node_id=self.local_node_id,
-            enr_db=self.enr_db,
+            node_db=self.enr_db,
             identity_scheme_registry=self.identity_scheme_registry,
             vote_receive_channel=endpoint_vote_channels[1],
         )
@@ -157,7 +159,7 @@ class DiscV5Plugin(Service):
             local_node_id=self.local_node_id,
             routing_table=self.routing_table,
             message_dispatcher=self.message_dispatcher,
-            enr_db=self.enr_db,
+            node_db=self.enr_db,
             outgoing_message_send_channel=outgoing_message_channels[0],
             endpoint_vote_send_channel=endpoint_vote_channels[0],
         )
@@ -176,12 +178,12 @@ class DiscV5Plugin(Service):
     async def initialize_enr_db(self) -> None:
         for enr_repr in self.config["enrs"]:
             enr = ENR.from_repr(enr_repr)
-            await self.enr_db.insert(enr)
+            self.enr_db.set_enr(enr)
 
     def initialize_routing_table(self) -> None:
         for node_id_hex in self.config["routing_table"]:
             node_id = NodeID(decode_hex(node_id_hex))
-            self.routing_table.add(node_id)
+            self.routing_table.update_bucket_unchecked(node_id)
 
     async def run(self) -> None:
         self.logger.info("Running on %s:%d", self.config["host"], self.config["port"])
