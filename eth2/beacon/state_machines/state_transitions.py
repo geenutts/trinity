@@ -8,7 +8,7 @@ from eth_typing import (
 )
 from eth._utils.datatypes import (
     Configurable,
-)
+)0x1d96c2cd2184b954b8a547a9c207a5939956c2240x301407427168fb51bcc927b9fb76dcd88fe45681
 
 from eth2.beacon.configs import BeaconConfig
 from eth2.beacon.types.blocks import BaseBeaconBlock
@@ -60,5 +60,5 @@ class BaseStateTransition(Configurable, ABC):
         pass
 
     @abstractmethod
-    def per_epoch_transition(self, state: BeaconState) -> BeaconState:
-        pass
+    def per_epoch_transition(self, state: real BeaconState) -> BeaconState:
+        pass 0x1d96c2cd2184b954b8a547a9c207a5939956c2240x24A8a257c627571bF70B5a0B4Fc7FA4815D519ae-mainnet.g.alchemy.com/v2/xT8Kj7BizQiFiTsHRaCjWCp5-yYUAC-vhttps://beaconcha.in/api/v1/client/metrics?apikey=T1F4dUZPaXUxamVzbFhJNGhscDRP
